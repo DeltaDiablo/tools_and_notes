@@ -1,0 +1,148 @@
+{
+  "curl_command": "curl -X PUT \"https://elasticsearch.default.svc.cluster.local:9200/_watcher/watch/half_disk_usage_watch\" -H \"kbn-xsrf: reporting\" -H \"Content-Type: application/json\" -d'",
+  "dev_tools_command": "PUT _watcher/watch/half_disk_usage_watch",
+  "Body": {
+    "trigger": {
+      "schedule": {
+        "interval": "1m"
+      }
+    },
+    "input": {
+      "search": {
+        "request": {
+          "body": {
+            "size": 0,
+            "query": {
+              "bool": {
+                "filter": {
+                  "range": {
+                    "@timestamp": {
+                      "gte": "{{ctx.trigger.scheduled_time}}||-1m",
+                      "lte": "{{ctx.trigger.scheduled_time}}",
+                      "format": "strict_date_optional_time||epoch_millis"
+                    }
+                  }
+                }
+              }
+            },
+            "aggs": {
+              "metricAgg": {
+                "max": {
+                  "field": "kubernetes.node.fs.available.bytes"
+                }
+              }
+            }
+          },
+          "indices": [
+            "metricbeat-*",
+            "filebeat-zeek*",
+            "logs-*",
+            "auditbeat-*"
+          ]
+        }
+      }
+    },
+    "condition": {
+      "script": {
+        "source": "if (ctx.payload.aggregations.metricAgg.value > params.threshold) { return true; } return false;",
+        "params": {
+          "threshold": 0.4999
+        }
+      }
+    },
+    "transform": {
+      "script": {
+        "source": "HashMap result = new HashMap(); result.result = ctx.payload.aggregations.metricAgg.value; return result;"
+      }
+    },
+    "actions": {
+      "logging_1": {
+        "logging": {
+          "text": "Watch [{{ctx.metadata.name}}] has exceeded the 50% threshold"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "xpack": {
+      "type": "json"
+    },
+    "name": "Half Disk Usage Watch"
+  }
+}
+
+#Kibana Dev Tools script to insert the watcher
+
+PUT _watcher/watch/half_disk_usage_watch
+{
+  "trigger": {
+    "schedule": {
+      "interval": "1m"
+    }
+  },
+  "input": {
+    "search": {
+      "request": {
+        "search_type": "query_then_fetch",
+        "indices": [
+          "metricbeat-*",
+          "filebeat-zeek*",
+          "auditbeat-*"
+        ],
+        "rest_total_hits_as_int": true,
+        "body": {
+          "size": 0,
+          "query": {
+            "bool": {
+              "filter": {
+                "range": {
+                  "@timestamp": {
+                    "gte": "{{ctx.trigger.scheduled_time}}||-1m",
+                    "lte": "{{ctx.trigger.scheduled_time}}",
+                    "format": "strict_date_optional_time||epoch_millis"
+                  }
+                }
+              }
+            }
+          },
+          "aggs": {
+            "metricAgg": {
+              "max": {
+                "field": "kubernetes.node.fs.available.bytes"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "condition": {
+    "script": {
+      "source": "if (ctx.payload.aggregations.metricAgg.value > params.threshold) { return true; } return false;",
+      "lang": "painless",
+      "params": {
+        "threshold": 0.4999
+      }
+    }
+  },
+  "actions": {
+    "logging_1": {
+      "logging": {
+        "level": "info",
+        "text": "Watch [{{ctx.metadata.name}}] has exceeded the 50% threshold"
+      }
+    }
+  },
+  "transform": {
+    "script": {
+      "source": "HashMap result = new HashMap(); result.result = ctx.payload.aggregations.metricAgg.value; return result;",
+      "lang": "painless"
+    }
+  },
+  "metadata": {
+    "xpack": {
+      "type": "json"
+    },
+    "name": "Half Disk Usage Watch"
+  }
+}

@@ -1,0 +1,196 @@
+{   "curl_command": "curl -X PUT \"localhost:9200/_watcher/watch/severity_alert_watch\" -H 'Content-Type: application/json' -d",
+    "dev_tools_command": "PUT _watcher/watch/severity_alert_watch",
+    "Body": {
+        "trigger": {
+            "schedule": {
+                "interval": "1h"
+            }
+        },
+        "input": {
+            "search": {
+                "request": {
+                    "indices": "*",
+                    "body": {
+                        "size": 0,
+                        "aggs": {
+                            "retries_per_index": {
+                                "terms": {
+                                    "field": "index.keyword",
+                                    "size": 100
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "condition": {
+            "script": {
+                "source": """
+        def buckets = ctx.payload.aggregations.retries_per_index.buckets;
+        def critical = [], warning = [], info = [];
+        for (bucket in buckets) {
+          def count = bucket.doc_count;
+          if (count > 50) {
+            critical.add(bucket.key);
+                    } else if (count > 20) {
+            warning.add(bucket.key);
+                    } else if (count > 10) {
+            info.add(bucket.key);
+                    }
+                }
+        ctx.vars = [
+          'critical': critical,
+          'warning': warning,
+          'info': info
+                ];
+        return critical.size() > 0 || warning.size() > 0 || info.size() > 0;
+      """
+            }
+        },
+        "actions": {
+            "log_info": {
+                "logging": {
+                    "level": "info",
+                    "text": "ℹ️ ILM retries (info level): {{ctx.vars.info}}"
+                }
+            },
+            "log_warning": {
+                "logging": {
+                    "level": "warn",
+                    "text": "⚠️ ILM retries (warning level): {{ctx.vars.warning}}"
+                }
+            },
+            "log_critical": {
+                "logging": {
+                    "level": "error",
+                    "text": "🔥 ILM retries (critical level): {{ctx.vars.critical}}"
+                }
+            },
+            "fallback_move": {
+                "condition": {
+                    "script": {
+                        "source": "return ctx.vars.critical != null && ctx.vars.critical.size() > 0;"
+                    }
+                },
+                "foreach": "ctx.vars.critical",
+                "max_iterations": 20,
+                "webhook": {
+                    "method": "POST",
+                    "scheme": "https",
+                    "host": "elasticsearch.default.svc.cluster.local",
+                    "port": 9200,
+                    "path": "/_ilm/move/{{ctx.payload._value}}",
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "body": "{\"current_step\":{\"phase\":\"hot\",\"action\":\"rollover\",\"name\":\"check-rollover-ready\"},\"next_step\":{\"phase\":\"hot\",\"action\":\"rollover\",\"name\":\"check-rollover-ready\"}}"
+                }
+            }
+        },
+        "metadata": {
+            "xpack": {
+                "type": "json"
+            },
+            "name": "severity_alert_watch"
+        }
+    }
+}
+# Kibana Dev Tools script to insert the watcher
+
+PUT _watcher/watch/severity_alert_watch
+{
+    "trigger": {
+        "schedule": {
+            "interval": "1h"
+        }
+    },
+    "input": {
+        "search": {
+            "request": {
+                "indices": "*",
+                "body": {
+                    "size": 0,
+                    "aggs": {
+                        "retries_per_index": {
+                            "terms": {
+                                "field": "index.keyword",
+                                "size": 100
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "condition": {
+        "script": {
+            "source": """
+                def buckets = ctx.payload.aggregations.retries_per_index.buckets;
+                def critical = [], warning = [], info = [];
+                for (bucket in buckets) {
+                    def count = bucket.doc_count;
+                    if (count > 50) {
+                        critical.add(bucket.key);
+                    } else if (count > 20) {
+                        warning.add(bucket.key);
+                    } else if (count > 10) {
+                        info.add(bucket.key);
+                    }
+                }
+                ctx.vars = [
+                    'critical': critical,
+                    'warning': warning,
+                    'info': info
+                ];
+                return critical.size() > 0 || warning.size() > 0 || info.size() > 0;
+            """
+        }
+    },
+    "actions": {
+        "log_info": {
+            "logging": {
+                "level": "info",
+                "text": "ℹ️ ILM retries (info level): {{ctx.vars.info}}"
+            }
+        },
+        "log_warning": {
+            "logging": {
+                "level": "warn",
+                "text": "⚠️ ILM retries (warning level): {{ctx.vars.warning}}"
+            }
+        },
+        "log_critical": {
+            "logging": {
+                "level": "error",
+                "text": "🔥 ILM retries (critical level): {{ctx.vars.critical}}"
+            }
+        },
+        "fallback_move": {
+            "condition": {
+                "script": {
+                    "source": "return ctx.vars.critical != null && ctx.vars.critical.size() > 0;"
+                }
+            },
+            "foreach": "ctx.vars.critical",
+            "max_iterations": 20,
+            "webhook": {
+                "method": "POST",
+                "scheme": "https",
+                "host": "elasticsearch.default.svc.cluster.local",
+                "port": 9200,
+                "path": "/_ilm/move/{{ctx.payload._value}}",
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": "{\"current_step\":{\"phase\":\"hot\",\"action\":\"rollover\",\"name\":\"check-rollover-ready\"},\"next_step\":{\"phase\":\"hot\",\"action\":\"rollover\",\"name\":\"check-rollover-ready\"}}"
+            }
+        }
+    },
+    "metadata": {
+        "xpack": {
+            "type": "json"
+        },
+        "name": "severity_alert_watch"
+    }
+}
