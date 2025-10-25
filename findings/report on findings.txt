@@ -8,6 +8,6 @@ where most issues have been reported. We used various Kubernetes tools to examin
 The container logs displayed a random warning related to a cronQueries setting in the config.ini file, 
 which we have not configured. This setting is only enabled when multiple nodes are connected, with only one node set to true; 
 otherwise it remains unset. During system analysis, we discovered PID 741873 on the sensor was spiking intermittently. 
-While we cannot confirm if this is related to the issues, it was noted that this PID referenced the config.ini file located inside the Kubernetes container instance for Arkime.
+While we cannot confirm if this is related to the issues, it was noted that this PID referenced the config.ini file location located inside the Kubernetes container instance for Arkime.
 
 Day 2: 25 October 2025 - 
