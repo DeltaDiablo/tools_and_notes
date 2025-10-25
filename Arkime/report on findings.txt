@@ -1,7 +1,13 @@
-Upon arriving at the site with the team, we evaluated the kit and observed the system in operation. No faults were detected and the Elastic Watcher function was operating slowly. We examined all indexes for recovery states but found none in a recovering state. All systems were performing correctly.
+Upon arriving at the site with the team, we evaluated the kit and observed the system in operation. 
+No faults were detected and the Elastic Watcher function was operating slowly. 
+We examined all indexes for recovery states but found none in a recovering state. 
+All systems were performing correctly. Four sensors were running: 
+sensor 1 and sensor 2 were identical except for the third octet in the IP address on sensor 1. Sensor 2 showed no issues. 
+We conducted a deep analysis on the Arkime container to investigate potential problems with the Arkime instance on sensor 1, 
+where most issues have been reported. We used various Kubernetes tools to examine container logs.
+The container logs displayed a random warning related to a cronQueries setting in the config.ini file, 
+which we have not configured. This setting is only enabled when multiple nodes are connected, with only one node set to true; 
+otherwise it remains unset. During system analysis, we discovered PID 741873 on the sensor was spiking intermittently. 
+While we cannot confirm if this is related to the issues, it was noted that this PID referenced the config.ini file located inside the Kubernetes container instance for Arkime.
 
-Four sensors were running: sensor 1 and sensor 2 were identical except for the third octet in the IP address on sensor 1. Sensor 2 showed no issues. We conducted a deep analysis on the Arkime container to investigate potential problems with the Arkime instance on sensor 1, where most issues have been reported. We used various Kubernetes tools to examine container logs.
-
-The container logs displayed a random warning related to a cronQueries setting in the config.ini file, which we have not configured. This setting is only enabled when multiple nodes are connected, with only one node set to true; otherwise it remains unset. 
-
-During system analysis, we discovered PID 741873 on the sensor was spiking intermittently. While we cannot confirm if this is related to the issues, it was noted that this PID referenced the config.ini file located inside the Kubernetes container instance for Arkime.
+Day 2: 25 October 2025 - 
