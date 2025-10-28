@@ -1,0 +1,138 @@
+# arkime-memory-fix.patch
+# Critical memory optimization for Arkime configuration
+# Apply values.yaml.j2 file
+
+# PROBLEM ANALYSIS:
+# Based on current configuration, the primary memory consumer is:
+# - maxStreams: 14,000,000 (using ~16GB of RAM alone!)
+# - maxPacketsInQueue: 400,000 (using ~100MB-1GB depending on traffic)
+# - Large bulk operations causing ES backpressure
+
+# ROOT CAUSE: Stream tracking is consuming most of your 20GB memory limit
+# Each stream uses ~1KB of memory for tracking: 14M streams = 14GB+ RAM
+
+---
+# EMERGENCY FIXES (apply immediately if system is unstable)
+---
+
+# 1. DRAMATIC MEMORY REDUCTION - Stream Tracking
+maxStreams: 2000000              # DOWN from 14,000,000 (saves ~12GB RAM!)
+maxPackets: 3000                 # DOWN from 10,000 per stream
+
+# 2. PACKET QUEUE OPTIMIZATION
+maxPacketsInQueue: 100000        # DOWN from 400,000 (saves ~300MB)
+packetsPerPoll: 100000           # DOWN from 500,000 (prevents memory spikes)
+
+# 3. PROCESSING THREAD INCREASE
+packetThreads: 6                 # UP from 3 (better processing throughput)
+tpacketv3NumThreads: 4           # UP from 2 (better capture performance)
+
+# 4. ELASTICSEARCH OPTIMIZATION
+dbBulkSize: 150000               # DOWN from 400,000 (reduces memory per bulk op)
+maxESConns: 30                   # DOWN from 60 (reduces connection overhead)
+maxESRequests: 200               # DOWN from 500 (reduces queued request memory)
+
+# 5. DISK I/O OPTIMIZATION
+pcapWriteSize: 1048576           # DOWN from 2,560,000 (1MB writes, less I/O blocking)
+maxFileSizeG: 0.5                # DOWN from 1 (faster rotation, less disk queue buildup)
+
+---
+# PRODUCTION OPTIMIZATIONS (apply after emergency fixes stabilize system)
+---
+
+# Enhanced resource limits
+mem_limit: 24Gi                  # UP from 20Gi (but with reduced usage from above)
+cpu_request: 3000                # UP from current (3 CPU cores)
+
+# Advanced memory management
+compressES: true                 # Enable ES compression to save bandwidth/memory
+supportSha256: true              # Enable deduplication to save memory
+
+# Improved index management
+rotateIndex: "hourly4"           # 4-hour rotation for better manageability
+spiDataMaxIndices: 15            # More indices for better load distribution
+
+# Optional disk space optimization (if disk is also an issue)
+freespaceG: 12%                  # DOWN from 25% (allow more data before rotation)
+# pcapWriteMethod: "disablepcap" # UNCOMMENT to disable PCAP writing entirely
+
+---
+# MONITORING ADDITIONS
+---
+
+# Add these to your Helm values for better observability
+monitoring:
+  enabled: true
+  statsPort: 8005
+  metricsPath: "/stats.json"
+
+# Health checks
+livenessProbe:
+  httpGet:
+    path: /stats.json
+    port: 8005
+  initialDelaySeconds: 60
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /stats.json  
+    port: 8005
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+---
+# EXPECTED RESULTS AFTER APPLYING THESE CHANGES:
+---
+
+# MEMORY USAGE REDUCTION:
+# - Stream tracking: 14GB → 2GB (12GB saved!)
+# - Packet queues: ~500MB → ~100MB (400MB saved)
+# - ES operations: ~200MB → ~50MB (150MB saved)
+# Total memory savings: ~12.5GB
+
+# PERFORMANCE IMPROVEMENTS:
+# - Better packet processing (6 threads vs 3)
+# - Faster disk I/O (1MB writes vs 2.5MB)
+# - Reduced ES backpressure (smaller bulk operations)
+# - Faster file rotation (0.5GB vs 1GB files)
+
+# STABILITY IMPROVEMENTS:
+# - Smaller memory footprint reduces OOM risk
+# - Better resource utilization prevents queue buildup
+# - Faster rotation prevents disk space issues
+
+---
+# APPLICATION INSTRUCTIONS:
+---
+
+# 1. EMERGENCY APPLICATION (if system is currently unstable):
+#    Update your values.yaml.j2 with the "EMERGENCY FIXES" section only
+#    Apply immediately: helm upgrade arkime ./arkime-chart
+
+# 2. FULL OPTIMIZATION (for stable production):
+#    Apply all sections above to your values.yaml.j2
+#    Test in staging environment first
+
+# 3. VERIFICATION:
+#    After applying, monitor with:
+#    kubectl top pods -l app=arkime-capture
+#    kubectl exec [pod] -- free -h
+#    kubectl exec [pod] -- df -h /data/moloch/raw
+
+---
+# ADDITIONAL RECOMMENDATIONS:
+---
+
+# If issues persist after these optimizations:
+# 1. Consider horizontal scaling (multiple Arkime instances)
+# 2. Implement BPF filters to reduce captured traffic scope
+# 3. Use dedicated high-performance storage for PCAP files
+# 4. Optimize Elasticsearch cluster for better indexing performance
+# 5. Consider disabling PCAP writing entirely (metadata-only capture)
+
+# Traffic-specific tuning:
+# - High HTTP traffic: Increase maxReqBody, reduce parseSMTP/parseSMB
+# - High encrypted traffic: Reduce TLS parsing, focus on metadata
+# - High packet rate: Increase tpacketv3BlockSize to 16MB or 32MB
+# - Low resources: Use arkime-emergency-values.yaml configuration

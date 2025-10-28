@@ -1,0 +1,23 @@
+• Operators were effective in deploying and coordinating operations with the system.
+
+• Operators are following instructions for proper deployment and setup and not using any special scripts or customizations on the system.
+
+• One key note for future operations, always have a backup light-weight deployable sensor with tap to support operations. The purpose is to keep the system up and performing appropriately and give it failover capability for failed states and actions.
+
+• Kubernetes pods are simple deployments, do not modify the pods or containers or when the container fails it will not retain the modifications.
+
+• There was a correlation between network connectivity and packet capturing, it appeared to be when the network was undergoing a period of intermittent connectivity for whatever reason and packet capturing was occurring. This could be a key point for packet capture functions, if the network is intermittent it has the possibility to throw out an incomplete message/traffic instance, which in turn arkime is recovering and moving on, but elastic is still looking for the original input from the network packet capture. Only problem is when it does not have the complete message/traffic and the packet capture has moved on elastic will put the index its writing to into a recovery mode, which will trigger the watcher to re run the step and move past the incomplete message/traffic. This means that there may be a lost package that is incomplete but it should still run with completed messaging.
+
+• The error is occurring on arkime, not elasticsearch, problem is coming from messages sizes that are exceeding the default configurations forcing the message to roll the linux pod/container to max out its memory and thus locking the pod so it cant process anything else, which forces the container to crash and recover with the transmission in question cleared. This is commonly identified on geojson type of files and does not occur that often, but it does occur.
+
+• The root cause for Disk Queue issues this is usually the Disk I/O is not keeping pace with the packet ingestion rate.
+
+• Memory saturation will occur with insufficient or inadequate 'packetThreads' or oversized bulk operations (which is where you will see the pcap stop, memory max out, and disk queue ramp up).
+
+Recommendations
+
+1. Immediate fix at the operator level when this situation occurs on site, stop and remove the arkime instance from the sensor, and redeploy with double the base resources, to include at least 4 threads and at least 31G memory with the pcap processing size increased to double the previous setting (50G), and set the message queue size to 500,000 records minimum, this will require tuning on site based on traffic size and flow.
+
+2. Developer requirements, in the ansible files used to create the sensors, need to increase minimum sizing to match that of step 1. Need to incorporate deploying the ansible instance of arkime with some configurable settings that will allow for large packets with a limits.conf file that should contain memorylock thresholds.
+
+
