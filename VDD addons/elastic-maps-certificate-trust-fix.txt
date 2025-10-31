@@ -5,17 +5,20 @@ Maps fail to load in Kibana due to certificate trust issues with the elastic-map
 
 **Symptoms:**
 - Yellow warning triangle appears in maps section
-- Error message references `https://elastic-maps-server.controller`
+- Error message references `https://elastic-maps-server.<controller>`
 
 ## Resolution Steps
 
-1. Click the hamburger menu next to the error indicator
+1. Click the hamburger menu next to the error indicator on the right side
 2. Copy the failing map server URL (typically `https://elastic-maps-server.<controller>`)
-3. Open the URL in a new browser tab
+3. Open the URL in a new browser tab or window
 4. Accept the certificate warning:
     - Click "Advanced"
-    - Select "Proceed to site"
+    - Select "Proceed to site" or "trust site"
+    **you are making this a trusted site for the computer you are on, 
+    from this point on the user will have maps available in elasticsearch**
 5. Verify the elastic-maps-server status page loads
+    - you should see the elastic-maps-server home page with the current maps status. (red/yellow/green)
 6. Return to Kibana and refresh the maps page
 
 ## Result
