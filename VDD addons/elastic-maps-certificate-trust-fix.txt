@@ -2,6 +2,8 @@
 
 ## Issue
 Maps fail to load in Kibana due to certificate trust issues with the elastic-maps-server endpoint.
+This is indicated when maps do not load and the right side ofthe screen 
+shows a yellow triangle with an exlamation point inside
 
 **Symptoms:**
 - Yellow warning triangle appears in maps section
