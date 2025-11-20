@@ -1,0 +1,49 @@
+
+Locations to add for maps workaround
+
+
+CPT VDD this will be a new entry in all sections for Possible Problems and Known Errors (Section 8) in VDDs for 3.8 and 3.7 CPT,MDT, and with GIP (Section 7)
+(3.7)
+https://confluence.levelup.cce.af.mil/spaces/THISISCVAH/pages/39129357/v3.7+Cyber+Protection+Team+CPT+VDD#v3.7CyberProtectionTeam(CPT)VDD-PossibleProblemsandKnownErrors
+
+https://confluence.levelup.cce.af.mil/spaces/THISISCVAH/pages/39129366/v3.7+Mission+Defense+Team+MDT+VDD#v3.7MissionDefenseTeam(MDT)VDD-PossibleProblemsandKnownErrors
+
+https://confluence.levelup.cce.af.mil/spaces/THISISCVAH/pages/39129374/v3.7+Garrison+Interceptor+Platform+GIP+VDD#v3.7GarrisonInterceptorPlatform(GIP)VDD-PossibleProblemsandKnownErrors
+
+
+(3.8)
+https://confluence.levelup.cce.af.mil/spaces/THISISCVAH/pages/187509974/v3.8+Cyber+Protection+Team+CPT+VDD#v3.8CyberProtectionTeam(CPT)VDD-PossibleProblemsandKnownErrors
+
+https://confluence.levelup.cce.af.mil/spaces/THISISCVAH/pages/187510013/v3.8+Mission+Defense+Team+MDT+VDD#v3.8MissionDefenseTeam(MDT)VDD-PossibleProblemsandKnownErrors
+
+https://confluence.levelup.cce.af.mil/spaces/THISISCVAH/pages/113125762/v3.8+Garrison+Interceptor+Platform+GIP+VDD#v3.8GarrisonInterceptorPlatform(GIP)VDD-PossibleProblemsandKnownErrors
+
+
+~~~~
+ 
+8.12 Maps Not Loading in Kibana
+ 
+Title: Maps Fail to show in Kibana
+
+Component(s): API Docs on the CVAH Frontend
+
+Hardware Model(s): All
+
+Description of issue: When the user opens Maps section in Kibana, maps are not displaying with an error on the layers tab
+
+Work Around: 
+1. Click the hamburger menu next to the error indicator on the right side
+2. Copy the failing map server URL (typically `https://elastic-maps-server.<controller>`)
+3. Open the URL in a new browser tab or window
+4. Accept the certificate warning:
+    - Click "Advanced"
+    - Select "Proceed to site" or "trust site"
+    **you are making this a trusted site for the computer you are on, 
+    from this point on the individual user will have maps available in Kibana**
+5. Verify the elastic-maps-server status page loads
+    - you should see the elastic-maps-server home page with the current maps status.
+6. Return to Kibana and refresh the maps page. 
+
+Targeted Fix Version: N/A
+ 
+~~~~

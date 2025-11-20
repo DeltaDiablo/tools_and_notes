@@ -1,0 +1,79 @@
+
+                                            26 OCT 2025
+
+
+FROM: Leidos, Inc 
+      3203 General Hudnell Suite 301
+      San Antonio TX, 78266
+
+SUBJECT: AFTER ACTION REPORT
+
+1. EXECUTIVE SUMMARY
+   
+   • Mission: Provide technical support to 902nd CPT at Vandenberg Listening Station, CA
+   • Problem: Intermittent sensor failures requiring periodic restart/redeployment of CVAH systems
+   • Duration: 23-28 October 2025 (6 days)
+   • Outcome: Root cause identified and remediation procedures established
+
+2. DAILY ACTIVITIES
+
+   Day 1 (23 OCT): Initial coordination and travel to Santa Maria, CA. Met with SSgt Johnson and George Arechega.
+
+   Day 2 (24 OCT): System evaluation revealed no active faults. Identified PID 741873 memory spikes and cronQueries configuration warnings in Arkime container logs.
+
+   Day 3 (25 OCT): Modified Elastic Watcher configuration to reduce excessive logging and improve efficiency. Identified potential need for Arkime reinstallation.
+
+   Day 4 (26 OCT): Continued monitoring showed stable packet capture. Watcher modifications required re-application. Scheduled automated snapshots for low-traffic periods.
+
+   Day 5 (27 OCT): Sensor 2 developed similar issues. Redeployed Sensor 5 with enhanced specifications (40GB RAM, 500K message queue). Reinstalled Arkime on Sensor 2 with 64GB RAM.
+
+   Day 6 (28 OCT): Implemented optimized Arkime configurations on multiple sensors with lighter, faster processing settings.
+
+3. ROOT CAUSE ANALYSIS
+
+   • Primary Issue: Arkime memory saturation during high network traffic periods
+   • Contributing Factors:
+     - Default configuration insufficient for traffic volume
+     - Disk I/O unable to keep pace with packet ingestion
+     - Oversized bulk operations causing memory locks
+     - Network intermittency creating incomplete packet captures
+
+4. LESSONS LEARNED
+
+   • Maintain backup lightweight sensors with tap capability for failover
+   • Avoid modifying Kubernetes pods/containers (changes not persistent)
+   • Network intermittency can cause Elasticsearch index recovery loops
+   • Default Arkime configurations inadequate for high-traffic environments
+
+5. RECOMMENDATIONS
+
+   Implement the following Arkime configuration modifications for high-traffic deployments:
+
+   Configuration Parameters:
+   ┌─────────────────────┬──────────────┬────────────┐
+   │ Parameter           │ Value        │ Action     │
+   ├─────────────────────┼──────────────┼────────────┤
+   │ mem_limit           │ 24Gi         │ Modify     │
+   │ cpu_request         │ 3000         │ Modify     │
+   │ maxFileSizeG        │ 25           │ Modify     │
+   │ freespaceG          │ 15%          │ Modify     │
+   │ spiDataMaxIndices   │ 15           │ Modify     │
+   │ packetThreads       │ 6            │ Modify     │
+   │ pcapWriteMethod     │ simple       │ Modify     │
+   │ pcapWriteSize       │ 1048576      │ Modify     │
+   │ dbBulkSize          │ 150000       │ Modify     │
+   │ maxESConns          │ 30           │ Modify     │
+   │ maxESRequests       │ 200          │ Modify     │
+   │ packetsPerPoll      │ 500000       │ Modify     │
+   │ magicMode           │ basic        │ Modify     │
+   │ tpacketv3BlockSize  │ 8388608      │ Modify     │
+   │ tpacketv3NumThreads │ 4            │ Modify     │
+   │ maxPacketsInQueue   │ 150000       │ Modify     │
+   │ rotateIndex         │ hourly4      │ Modify     │
+   │ maxstreams          │ 200000       │ Add        │
+   │ maxPackets          │ 3000         │ Add        │
+   │ compressES          │ true         │ Add        │
+   └─────────────────────┴──────────────┴────────────┘
+
+   Note: Apply these settings during Arkime reinstallation via CVAH configuration interface.
+

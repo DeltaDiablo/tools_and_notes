@@ -14,10 +14,7 @@
 
 • Memory saturation will occur with insufficient or inadequate 'packetThreads' or oversized bulk operations (which is where you will see the pcap stop, memory max out, and disk queue ramp up).
 
+
+
 Recommendations
-
-1. Immediate fix at the operator level when this situation occurs on site, stop and remove the arkime instance from the sensor, and redeploy with double the base resources, to include at least 4 threads and at least 31G memory with the pcap processing size increased to double the previous setting (50G), and set the message queue size to 500,000 records minimum, this will require tuning on site based on traffic size and flow.
-
-2. Developer requirements, in the ansible files used to create the sensors, need to increase minimum sizing to match that of step 1. Need to incorporate deploying the ansible instance of arkime with some configurable settings that will allow for large packets with a limits.conf file that should contain memorylock thresholds.
-
 
