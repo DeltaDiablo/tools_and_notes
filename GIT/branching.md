@@ -43,6 +43,45 @@ git checkout add-login
 git push -u origin add-login
 ```
 
+## 5. merge another branch onto your branch
+To merge another branch (e.g., `other-branch`) onto your current branch:
+
+```bash
+git checkout your-branch
+git merge other-branch
+```
+
+- Resolve any merge conflicts if prompted.
+- Commit the merge if necessary.
+- Push your updated branch to remote:
+
+```bash
+git push
+```
+
+
+## 6. rebase another branch onto your branch
+
+To rebase another branch (e.g., `other-branch`) onto your current branch:
+
+```bash
+git checkout your-branch
+git rebase other-branch
+```
+
+- If there are conflicts, resolve them and continue the rebase:
+
+```bash
+git add .
+git rebase --continue
+```
+
+- After a successful rebase, push your branch (you may need to force-push if the history changed):
+
+```bash
+git push --force-with-lease
+```
+
 ## Tips
 
 - Use descriptive branch names (e.g., `bugfix/login-error`, `feature/dashboard-ui`).
