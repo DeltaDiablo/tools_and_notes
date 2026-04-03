@@ -5,7 +5,7 @@ Planning architecture extension with Auditbeat, Logstash, and Fleet components. 
 ## Core Roles with New Components
 
 | Component | Role in the Data Plane |
-|---|---|
+| --- | --- |
 | Elasticsearch | Central data lake, search, analytics, SIEM backend |
 | Kibana | UI, Elastic Security, Fleet UI |
 | Fleet Server | Central management for Elastic Agents and Defend |
@@ -65,7 +65,7 @@ Use **Elastic Agent (managed by Fleet)** as your default collector:
 ## 4. Kubernetes Namespace Structure
 
 | Namespace | Components |
-|---|---|
+| --- | --- |
 | `sec-data-plane` | Elasticsearch, Logstash |
 | `sec-analytics` | Kibana, Fleet Server |
 | `sec-orchestration` | XSOAR |

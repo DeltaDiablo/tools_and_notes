@@ -1,0 +1,34 @@
+High maxstreams Value
+
+2000000 is quite large. Each stream consumes memory, so this could easily exhaust your 24Gi limit depending on traffic volume and stream duration.
+
+Try reducing this to something like 500000 or 1000000 and monitor memory usage.
+
+packetsPerPoll and packetThreads
+
+packetsPerPoll: 500000 with packetThreads: 6 can lead to high burst memory usage.
+
+Consider reducing packetsPerPoll to 100000 or 250000 and see if stability improves.
+
+tpacketv3BlockSize and tpacketv3NumThreads
+
+These settings affect how much memory is allocated for packet capture buffers. With 4 threads and 8MB blocks, that’s 32MB per interface per thread, which can add up.
+
+You might try reducing tpacketv3NumThreads to 2 or tuning block size.
+
+Elasticsearch Load
+
+dbBulkSize: 150000 and maxESRequests: 200 can create large memory spikes during bulk indexing.
+
+Try lowering dbBulkSize to 50000 and maxESRequests to 100.
+
+Memory Fragmentation or Leaks
+
+If Arkime is running for long periods, memory fragmentation or leaks in packet processing could cause gradual bloat. Monitor memory over time using tools like htop, valgrind, or Arkime’s internal stats.
+
+✅ Suggestions to Try
+Reduce maxstreams to 500k–1M.
+
+Lower packetsPerPoll to 100k–250k.
+
+Tune dbBulkSize to 50k–100k.

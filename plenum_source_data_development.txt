@@ -1,0 +1,97 @@
+cvah settings for controller only deployment
+IP Address: 10.10.103.10
+username: edward.thomas@SIL.LAB
+password:
+confirm
+password:
+
+datastore
+DEV-vSAN
+
+portgroup
+15-Dev5-thomas
+
+VCenter checked
+
+CLuster
+DEV_Cluster
+
+Datacenter
+DEV_Datacenter
+
+Folder
+Thomas/exp || thomas/dev
+
+General settings
+
+Domain
+thomaslan0
+
+Controller IP Address
+10.40.15.128 || 10.40.15.192
+
+Gateway
+10.40.15.1 || 10.40.15.2
+
+Netmask
+255.255.255.0
+
+Kit Settings
+
+upstream dns server
+10.10.101.11
+
+upstream NTP server
+10.10.101.11
+
+
+Kubernetes service range
+10.40.15.96 || 10.40.15.160
+
+
+
+TASK [controller/isos : Set Key] ***********************************************
+
+ok: [localhost]
+
+Monday 08 December 2025 18:49:04 +0000 (0:00:00.052) 0:02:28.394 *******
+
+
+TASK [controller/isos : Generate Kickstart] ************************************
+
+changed: [localhost]
+
+Monday 08 December 2025 18:49:05 +0000 (0:00:00.658) 0:02:29.053 *******
+
+
+TASK [controller/isos : Create iso menu] ***************************************
+
+changed: [localhost] => (item={'src': 'files/isolinux.cfg', 'dest': '/var/www/html/offlinerepo/packages/bootstrap/isolinux.cfg'})
+
+changed: [localhost] => (item={'src': 'files/grub.cfg', 'dest': '/var/www/html/offlinerepo/packages/bootstrap/grub.cfg'})
+
+Monday 08 December 2025 18:49:06 +0000 (0:00:01.223) 0:02:30.276 *******
+
+
+TASK [controller/isos : Extract ISO boot structure from ISO file (to writable location)] ***
+
+changed: [localhost] => (item=isolinux)
+
+changed: [localhost] => (item=images)
+
+Monday 08 December 2025 18:49:12 +0000 (0:00:06.289) 0:02:36.565 *******
+
+
+TASK [controller/isos : Generate Sensor ISO] ***********************************
+
+changed: [localhost]
+
+
+PLAY [Create Certificate Authority] ********************************************
+
+Monday 08 December 2025 19:12:23 +0000 (0:23:10.995) 0:25:47.561 *******
+
+
+TASK [Create cert authority pre_tasks] *****************************************
+
+ok: [localhost]
