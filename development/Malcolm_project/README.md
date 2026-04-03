@@ -334,6 +334,92 @@ Default UI user: `admin` with the password set during `create_auth_files.sh`.
 
 ---
 
+## Running Malcolm with Podman
+
+Use this path if you prefer Podman over Docker.
+
+### 1. Install Podman and Podman Compose
+
+Rocky Linux 9.5:
+
+```bash
+sudo dnf -y install podman podman-compose
+```
+
+Debian/Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install -y podman podman-compose
+```
+
+### 2. Enable Podman socket (recommended)
+
+```bash
+sudo systemctl enable --now podman.socket
+```
+
+### 3. Set vm.max_map_count (required for OpenSearch)
+
+```bash
+echo 'vm.max_map_count=262144' | sudo tee /etc/sysctl.d/99-malcolm-opensearch.conf
+sudo sysctl --system
+sysctl vm.max_map_count
+```
+
+Expected output includes: `vm.max_map_count = 262144`.
+
+### 4. Change to Malcolm project directory
+
+```bash
+cd tools_and_notes/development/Malcolm_project
+```
+
+### 5. Authenticate to GitHub Container Registry
+
+```bash
+podman login ghcr.io
+```
+
+Use your GitHub username and a Personal Access Token (PAT) with `read:packages` scope.
+
+### 6. Generate auth and TLS files
+
+```bash
+bash create_auth_files.sh
+```
+
+Note: `create_auth_files.sh` auto-detects its base path from script location. You can still override it temporarily with `BASE=/your/path bash create_auth_files.sh`.
+
+### 7. Pull images and start the stack
+
+```bash
+podman compose --profile malcolm pull
+podman compose --profile malcolm up -d
+```
+
+### 8. Check status and logs
+
+```bash
+podman compose ps
+podman compose logs -f opensearch
+```
+
+### 9. Access web interfaces
+
+- `https://localhost`
+- `https://localhost/arkime`
+- `https://localhost/dashboards`
+- `https://localhost/upload`
+
+### Podman compatibility notes
+
+- Rootful Podman is recommended for this stack (simpler networking and fewer low-port binding issues).
+- If you use bind mounts on SELinux-enabled hosts, label mount paths appropriately (`:z`/`:Z` or `semanage` + `restorecon`).
+- If `podman compose` is unavailable, use `podman-compose` with equivalent commands.
+
+---
+
 ### 1. Set vm.max_map_count (WSL2 requirement for OpenSearch)
 
 ```powershell

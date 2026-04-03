@@ -1,6 +1,7 @@
 #!/bin/bash
 # Generate all Malcolm authentication files manually (replaces auth_setup)
-BASE=/mnt/d/development/GitKraken/tools_and_notes/development/Malcolm_project
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+BASE=${BASE:-$SCRIPT_DIR}
 
 MALCOLM_ADMIN_USER="admin"
 MALCOLM_ADMIN_PASS="testbuilDer"
