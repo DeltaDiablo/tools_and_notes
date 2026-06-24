@@ -12,7 +12,7 @@ To redeploy changes to a Kubernetes resource (such as Elasticsearch, Suricata, o
 - Run:
 
 ```sh
-kubectl apply -f your-resource.yaml
+kubectl apply -f /your/location/for/file/your-resource.yaml
 ```
 
 This command updates or redeploys only the specified resource in your cluster. There is no need to redeploy the entire cluster or control plane. This is the standard Kubernetes workflow for updating or redeploying services.

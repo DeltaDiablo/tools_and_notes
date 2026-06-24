@@ -502,6 +502,7 @@ alias kctx='kubectl config current-context'
 ## Common Troubleshooting Scenarios
 
 ### Pod not starting
+
 ```bash
 kubectl describe pod <pod-name>
 kubectl logs <pod-name>
@@ -509,6 +510,7 @@ kubectl get events --sort-by='.lastTimestamp'
 ```
 
 ### Service not accessible
+
 ```bash
 kubectl get endpoints <service-name>
 kubectl describe service <service-name>
@@ -516,6 +518,7 @@ kubectl get pods -l <service-selector>
 ```
 
 ### Node issues
+
 ```bash
 kubectl describe node <node-name>
 kubectl get nodes
@@ -523,7 +526,26 @@ kubectl top nodes
 ```
 
 ### Resource quota issues
+
 ```bash
 kubectl describe resourcequota -n <namespace>
 kubectl describe limitrange -n <namespace>
+```
+
+### Clear all the PV and PVC in one shot 
+
+```bash
+kubectl get pvc --all-namespaces -o json | \
+jq '.items[] | {name: .metadata.name, namespace: .metadata.namespace}' -c | \
+while read i; do
+  name=$(echo $i | jq -r '.name')
+  ns=$(echo $i | jq -r '.namespace')
+  kubectl patch pvc $name -n $ns -p '{"metadata":{"finalizers":null}}' \
+done; && \
+kubectl get pv -o json | \
+jq '.items[] | .metadata.name' -r | \
+while read pv; do
+  kubectl patch pv $pv -p '{"metadata":{"finalizers":null}}'
+done; && \
+kubectl delete pvc --all --all-namespaces && kubectl delete pv --all
 ```
