@@ -1,0 +1,47 @@
+{ "index": ".kibana", "type": "_doc", "id": "bruteforce-dashboard", "version": 1 }
+{ "type": "dashboard", "dashboard": {
+  "title": "Brute Force Detection Dashboard",
+  "hits": 0,
+  "description": "Detects SSH/FTP/SMB/HTTP brute force attempts using Suricata + Zeek logs.",
+  "panelsJSON": "[{\"panelIndex\":\"1\",\"type\":\"visualization\",\"id\":\"vis-suricata-bruteforce\",\"gridData\":{\"x\":0,\"y\":0,\"w\":24,\"h\":8}},{\"panelIndex\":\"2\",\"type\":\"visualization\",\"id\":\"vis-zeek-ssh-failures\",\"gridData\":{\"x\":0,\"y\":8,\"w\":24,\"h\":8}},{\"panelIndex\":\"3\",\"type\":\"visualization\",\"id\":\"vis-zeek-conn-burst\",\"gridData\":{\"x\":0,\"y\":16,\"w\":24,\"h\":8}},{\"panelIndex\":\"4\",\"type\":\"visualization\",\"id\":\"vis-http-auth-bruteforce\",\"gridData\":{\"x\":0,\"y\":24,\"w\":24,\"h\":8}}]",
+  "optionsJSON": "{\"useMargins\":true,\"hidePanelTitles\":false}",
+  "version": 1
+}}
+{ "index": ".kibana", "type": "_doc", "id": "vis-suricata-bruteforce", "version": 1 }
+{ "type": "visualization", "visualization": {
+  "title": "Suricata Brute Force Alerts",
+  "visState": "{\"title\":\"Suricata Brute Force Alerts\",\"type\":\"table\",\"params\":{\"perPage\":10},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\"},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"alert.signature.keyword\",\"size\":50}}]}",
+  "uiStateJSON": "{}",
+  "description": "",
+  "version": 1,
+  "kibanaSavedObjectMeta": {
+    "searchSourceJSON": "{\"index\":\"*\",\"query\":{\"query_string\":{\"query\":\"event.module: suricata AND (alert.signature:*Brute* OR alert.signature:*SSH* OR alert.signature:*FTP* OR alert.signature:*SMB*)\"}},\"filter\":[]}"
+  }
+}}
+{ "index": ".kibana", "type": "_doc", "id": "vis-zeek-ssh-failures", "version": 1 }
+{ "type": "visualization", "visualization": {
+  "title": "Zeek SSH Authentication Failures",
+  "visState": "{\"title\":\"Zeek SSH Authentication Failures\",\"type\":\"table\",\"params\":{\"perPage\":10},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\"},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"source.ip\",\"size\":50}}]}",
+  "uiStateJSON": "{}",
+  "kibanaSavedObjectMeta": {
+    "searchSourceJSON": "{\"query\":{\"query_string\":{\"query\":\"event.dataset: zeek.ssh AND zeek.ssh.auth_success: false\"}},\"filter\":[]}"
+  }
+}}
+{ "index": ".kibana", "type": "_doc", "id": "vis-zeek-conn-burst", "version": 1 }
+{ "type": "visualization", "visualization": {
+  "title": "Zeek Connection Bursts",
+  "visState": "{\"title\":\"Zeek Connection Bursts\",\"type\":\"histogram\",\"params\":{\"addLegend\":true,\"addTimeMarker\":false},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\"},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"source.ip\",\"size\":20}}]}",
+  "uiStateJSON": "{}",
+  "kibanaSavedObjectMeta": {
+    "searchSourceJSON": "{\"query\":{\"query_string\":{\"query\":\"event.dataset: zeek.conn AND zeek.conn.duration < 2\"}},\"filter\":[]}"
+  }
+}}
+{ "index": ".kibana", "type": "_doc", "id": "vis-http-auth-bruteforce", "version": 1 }
+{ "type": "visualization", "visualization": {
+  "title": "HTTP Authentication Failures (401)",
+  "visState": "{\"title\":\"HTTP Authentication Failures\",\"type\":\"table\",\"params\":{\"perPage\":10},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\"},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"source.ip\",\"size\":50}}]}",
+  "uiStateJSON": "{}",
+  "kibanaSavedObjectMeta": {
+    "searchSourceJSON": "{\"query\":{\"query_string\":{\"query\":\"event.dataset: zeek.http AND http.response.status_code: 401\"}},\"filter\":[]}"
+  }
+}}

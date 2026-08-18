@@ -1,0 +1,39 @@
+RocketChat Troubleshooting Commands
+=================================
+
+# Check RocketChat pods
+kubectl get pods -n rocketchat
+
+# Describe failing RocketChat pod
+kubectl describe pod rocketchat-rocketchat-rocketchat-rocketchat-54dc4b6f6-zwctl -n rocketchat
+
+# List secrets in RocketChat namespace
+kubectl get secret -n rocketchat
+
+# Describe RocketChat deployment
+kubectl describe deployment rocketchat-rocketchat-rocketchat-rocketchat -n rocketchat
+
+# Create missing secret (temporary diagnostic fix)
+kubectl create secret generic rocketchat-rocketchat-secret   -n rocketchat   --from-literal=admin_user=admin   --from-literal=admin_pass='TempPassword123!'
+
+# Verify secret exists
+kubectl get secret rocketchat-rocketchat-secret -n rocketchat
+
+# Delete failing pod so deployment recreates it
+kubectl delete pod rocketchat-rocketchat-rocketchat-rocketchat-54dc4b6f6-zwctl -n rocketchat
+
+# Alternative: restart deployment
+kubectl rollout restart deployment/rocketchat-rocketchat-rocketchat-rocketchat -n rocketchat
+
+# Watch pod recovery
+kubectl get pods -n rocketchat -w
+
+# Recheck cluster addon status
+kubectl get packs -n cluster-6a46f1bb091a7e57f16569a7
+
+# Recheck SpectroCluster conditions
+kubectl get spectrocluster gip9   -n cluster-6a46f1bb091a7e57f16569a7   -o yaml | sed -n '/conditions:/,/services:/p'
+
+
+
+We validated the legacy RSA2ELK modules in Filebeat 8.7.0. The module-specific assets appear to be ingest pipelines only. We did not identify unique templates or ILM policies associated with these modules. Therefore, preserving and re-importing the pipelines is likely sufficient to restore parsing support for historical/cold-log ingestion on 8.17 deployments

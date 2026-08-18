@@ -1,0 +1,33 @@
+getting arkime config file and locations
+
+1. ssh into the controller
+
+```bash
+ssh root@<controller ip address>
+```
+
+2. get the pod names with arkime in them and then copy the arkime-viewer pod name
+
+```bash
+kubectl get pods | grep arkime
+```
+
+3. check the config file on the arkime viewer pod by executing this command to open the pod
+```bash
+kubectl exec -it <pod name> -c arkime-viewer -- /bin/bash
+```
+
+4. then look for the active plugins by running this command
+```bash
+grep -i plugins /opt/arkime/etc/config.ini
+```
+	if that fails try this
+```bash
+grep -i plugins /arkime/etc/config.ini
+```
+
+you will then look for a line like this 
+
+plugins=wise,tagger.netflow
+
+if that has something 

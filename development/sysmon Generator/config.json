@@ -1,0 +1,27 @@
+﻿{
+  "delay": 2,
+  "tests": [
+    {
+      "type": "ProcessCreate",
+      "binary": "notepad.exe"
+    },
+    {
+      "type": "Network",
+      "url": "http://example.com"
+    },
+    {
+      "type": "FileCreate",
+      "path": "C:\\temp\\sysmon_test.txt"
+    },
+    {
+      "type": "Registry",
+      "path": "HKCU:\\Software\\SysmonTest",
+      "name": "TestValue",
+      "value": "123"
+    },
+    {
+      "type": "DNS",
+      "domain": "microsoft.com"
+    }
+  ]
+}

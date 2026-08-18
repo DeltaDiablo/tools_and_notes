@@ -1,0 +1,51 @@
+Logstash Pipeline Configuration Update for Winlogbeat (Elastic 8.x)
+Overview
+After upgrading from Elasticsearch 7.x to 8.x, Winlogbeat no longer performs normalization locally. Instead, normalization into ECS format is handled by Elasticsearch ingest pipelines. When using Logstash, these pipelines must be explicitly forwarded.
+Problem
+Winlogbeat data is being ingested with raw fields such as winlogbeat.event_id instead of normalized ECS fields like event.code. This occurs because Logstash is not forwarding the ingest pipeline information to Elasticsearch.
+Solution
+Update the Logstash pipeline configuration to include the pipeline directive in the Elasticsearch output block.
+
+Steps to Update Logstash Configuration
+1. Locate the Logstash configuration file
+•	Linux: /etc/logstash/conf.d/
+•	Windows: C:\ProgramData\Elastic\Logstash\config\
+2. Open the configuration file
+	2a In Linux do this
+	vi /etc/logstash/conf.d/winlogbeat.conf
+
+	2b in windows do this
+ 		2.1 Open Notepad as Administrator (important)
+	2.2 Open the config file
+	2.3 In Notepad:
+		2.3.1 Click File → Open
+		2.3.2 Navigate to: C:\ProgramData\Elastic\Logstash\config\
+		2.3.3 Change file type to: All Files (*.*)
+
+3. Update the Elasticsearch output block
+Incorrect configuration:
+output {
+  elasticsearch {
+    hosts => ["https://elasticsearch:9200"]
+    index => "%{[@metadata][beat]}-%{[@metadata][version]}"
+  }
+}
+Correct configuration:
+output {
+  elasticsearch {
+    hosts    => ["https://elasticsearch:9200"]
+    index    => "%{[@metadata][beat]}-%{[@metadata][version]}"
+    pipeline => "%{[@metadata][pipeline]}"
+  }
+}
+4. Save and exit
+	4.1 in linux
+		:wq
+	4.1a in windows click save and choose save as then choose the logstash
+5. Restart Logstash
+Linux:
+	sudo systemctl restart logstash
+Windows powershell as an administrator:
+	Restart-Service logstash
+
+

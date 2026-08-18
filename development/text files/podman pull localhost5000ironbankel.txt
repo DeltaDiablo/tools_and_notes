@@ -1,0 +1,1 @@
+podman pull localhost:5000/ironbank/elastic/beats/auditbeat:8.18.1

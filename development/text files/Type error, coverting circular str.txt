@@ -1,0 +1,158 @@
+" Type error, coverting circular structure to json starting at object with constructor array index 8 object with constructor object property children closes the server", when looking up dates on the sessions tab error in arkime
+
+What the Error Actually Means
+Arkime’s UI is written in JavaScript. When the Sessions tab loads data, the client or server may attempt to run JSON.stringify() on a data object that contains a circular reference (an object referencing itself).
+This always causes the error:
+
+JSON has no support for circular references
+ [geeksforgeeks.org]
+JSON.stringify() throws exactly the message you’re seeing when it encounters this
+ [tutorialre...erence.com]
+Any UI (like Arkime’s) that tries to stringify log/session metadata that contains a circular structure will break.
+
+
+✅ Most Likely Causes in Arkime
+Based on typical Arkime architecture and the nature of this error, there are 4 common real causes:
+✅ 1. A plugin or viewer adding extra fields to session objects
+If an Arkime plugin attaches circular metadata (e.g., a child pointing back to a parent), the UI can blow up when rendering sessions.
+✅ 2. The sessions query returning malformed or looped data from Elasticsearch
+In Elasticsearch, improper ingest pipelines or enrichment scripts can create data structures that—when parsed into objects by the Arkime server—produce circular references.
+✅ 3. A bug in the Arkime UI when handling nested children arrays
+Your error mentions:
+
+“array index 8 … property children”
+
+Meaning Arkime likely has logic iterating through a children array of session-related nodes.
+Circular children relations (e.g., node.child.parent → node) can cause this.
+✅ 4. Running an older Arkime build
+Older UI builds (especially in the pre‑Arkime Moloch era and early Arkime 3.x) have known issues handling deeply nested session trees.
+
+✅ What You Can Do Right Now
+✅ 1. Check your Arkime version
+Several JSON‑handling bugs were fixed in the latest 3.x and 4.x releases.
+If you’re running anything older, upgrade first – Arkime devs have historically fixed UI circular‑reference bugs in updates.
+
+✅ 2. Check if the error happens for:
+
+❓ All sessions
+❓ Only a certain date range
+❓ Only when opening the session detail panel
+
+If only a specific session causes the crash, that session record likely has the circular structure in its metadata.
+
+✅ 3. Look at the server log
+On the Arkime capture/viewer node:
+journalctl -u arkimeviewer -f
+
+If the viewer logs blow up while loading the session, the server is generating circular JS objects.
+
+✅ 4. Disable optional Arkime plugins temporarily
+Plugins often attach parent / child references that can create cycles.
+Test by commenting them out in config.ini.
+Your open tab shows config.ini.sample (GitHub), so check for these in your own config:
+plugins=
+
+Temporarily remove non‑essential plugins, restart viewer, and test Sessions again.
+
+✅ 5. Check ingest pipelines
+If you enrich data before flowing into Elasticsearch (Logstash, Filebeat, custom pipeline scripts), you may be creating cyclical JSON structures—Elasticsearch will accept them, but Arkime won't be able to stringify them.
+
+✅ Why the UI Crashes (“closes the server”)
+Once Arkime tries to stringify the circular structure:
+
+The UI fails to build the Sessions table
+The viewer server may respond with an internal error
+The browser session resets, appearing like the server “closed”
+
+This behavior is normal in JS when JSON.stringify encounters recursion loops.
+ [stackoverflow.com]
+
+✅ If you want, I can help you pinpoint the exact root cause
+I can walk you through:
+✅ Checking the viewer logs
+✅ Identifying which session object is malformed
+✅ Looking at your Arkime config
+✅ Debugging the UI to see which node in the children array is circular
+Just tell me:
+
+Arkime version (arkimeviewer --version)
+Does it fail for all date ranges or only some?
+Does it fail when loading the sessions list or only when opening a session?
+
+Happy to help you get this tracked down and fixed.
+SourcesProvide your feedback on BizChatYou said: how can a user check to see if there is a plugin installed? we are running this on a kubernetes instanceCopilot said: CopilotHere’s the cleanest, Kubernetes‑specific way to check whether Arkime has any plugins installed or enabled. Since you’re running Arkime inside Kubernetes, the plugin layout is different from a bare‑metal install — but the checks are straightforward.
+
+✅ How to Check for Installed / Enabled Arkime Plugins in Kubernetes
+Arkime plugins are enabled in two places:
+
+The Arkime config (config.ini) inside the container
+The plugin directory (usually /opt/arkime/plugins or /arkime/plugins depending on your image)
+
+Below are the exact commands and steps to verify plugins in your K8s deployment.
+
+✅ 1. Find the Arkime viewer / capture pod
+Run:
+Shellkubectl get pods -n <your-namespace>Show more lines
+Look for pods named something like:
+
+arkime-viewer-*
+arkime-capture-*
+arkime-*
+
+
+✅ 2. Exec into the Arkime viewer pod
+The viewer is the service responsible for UI and plugins.
+Shellkubectl exec -it <arkime-viewer-pod> -n <your-namespace> -- bashShow more lines
+If the image doesn’t have bash:
+Shellkubectl exec -it <arkime-viewer-pod> -n <your-namespace> -- shShow more lines
+
+✅ 3. Check the active plugins in config.ini
+Inside the pod:
+Shellgrep -i plugins /opt/arkime/etc/config.iniShow more lines
+Or depending on your image:
+Shellgrep -i plugins /arkime/etc/config.iniShow more lines
+You're looking for a line like:
+plugins=wise,tagger,netflow
+
+If this line exists, those plugins are enabled.
+If it’s empty:
+plugins=
+
+Then no plugins are configured.
+If the line does not exist at all, Arkime is running with no enabled plugins.
+
+✅ 4. List the available plugin files
+Arkime loads plugins from the plugin folder (varies by container image):
+Try:
+Shellls -l /opt/arkime/pluginsShow more lines
+or:
+Shellls -l /arkime/pluginsShow more lines
+Typical plugin filenames:
+
+tagger.so
+wise.so
+netflow.so
+kafka.so
+
+If nothing is present or only sample libraries exist, no plugins are installed.
+
+✅ 5. Check the container environment variables (optional)
+Some Helm charts or K8s manifests override plugins via env vars:
+Shellenv | grep -i arkimeShow more lines
+Or specifically:
+Shellenv | grep -i pluginsShow more lines
+
+✅ 6. If Arkime is Helm‑deployed
+Look for plugins in your values file:
+YAMLarkime:  viewer:    config:      plugins: "wise,tagger"Show more lines
+or:
+YAMLextraEnv:  - name: PLUGINS    value: wise,taggerShow more lines
+
+✅ 7. Check Arkime logs for plugin loading
+From the pod:
+Shellkubectl logs <arkime-viewer-pod> -n <your-namespace> | grep -i pluginShow more lines
+You’ll see messages like:
+Loaded plugin wise.so
+Loaded plugin tagger.so
+
+No logs → No plugins loaded.

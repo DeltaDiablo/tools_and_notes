@@ -1,0 +1,5 @@
+curl -k -X DELETE https://localhost/chartmuseum/api/charts/arkime/2.1.0 -u admin
+
+
+curl -k -X DELETE https://localhost/chartmuseum/api/charts/logstash/1.0.9 -u admin
+

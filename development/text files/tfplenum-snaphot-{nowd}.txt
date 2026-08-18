@@ -1,0 +1,155 @@
+<tfplenum-snaphot-{now/d}>
+
+
+
+PUT _slm/policy/tfplenum-snapshots
+{
+  "name": "<tfplenum-snapshot-{now/d}>",
+  "schedule": "0 0 2 * * ?",
+  "repository": "elasticsearch",
+  "config": {
+    "include_global_state": false,
+    "feature_states": [
+      "none"
+    ]
+  },
+  "retention": {
+    "min_count": 1,
+    "max_count": 60
+  }
+}
+
+
+curl -u elastic:YOUR_PASSWORD \
+  -X PUT "https://YOUR_ES_URL:9200/_slm/policy/tfplenum-snapshots" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "<tfplenum-snapshot-{now/d}>",
+    "schedule": "0 0 2 * * ?",
+    "repository": "elasticsearch",
+    "config": {
+      "indices": ["*","-.*"],
+      "include_global_state": false
+    },
+    "retention": {
+      "min_count": 1,
+      "max_count": 60
+    }
+  }'
+
+
+
+
+this snapshot policy 
+✔ Snapshots all user indices
+✔ Excludes system indices
+✔ No cluster‑specific assumptions
+
+
+
+curl -u elastic:YOUR_PASSWORD \
+  -X PUT "https://YOUR_ES_URL:9200/_slm/policy/global-user-snapshots" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "<user-snapshot-{now/d}>",
+    "schedule": "0 0 2 * * ?",
+    "repository": "elasticsearch",
+    "config": {
+      "indices": ["*","-.*"],
+      "include_global_state": false
+    },
+    "retention": {
+      "min_count": 1,
+      "max_count": 60
+    }
+  }'
+
+ ILM Policy (Hot → Warm → Cold Searchable)
+✔ No index naming assumptions
+✔ Works for any user index
+✔ Cold phase uses searchable snapshots
+
+curl -u elastic:YOUR_PASSWORD \
+  -X PUT "https://YOUR_ES_URL:9200/_ilm/policy/global-user-ilm" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "policy": {
+      "phases": {
+        "hot": {
+          "actions": {
+            "set_priority": {
+              "priority": 100
+            }
+          }
+        },
+        "warm": {
+          "min_age": "7d",
+          "actions": {
+            "forcemerge": {
+              "max_num_segments": 1
+            }
+          }
+        },
+        "cold": {
+          "min_age": "30d",
+          "actions": {
+            "searchable_snapshot": {
+              "snapshot_repository": "elasticsearch"
+            }
+          }
+        }
+      }
+    }
+  }'
+
+
+ Global Index Template (apply to ALL user indices)
+✔ Matches everything
+✔ Excludes system indices via priority override
+✔ No index names required
+
+curl -u elastic:YOUR_PASSWORD \
+  -X PUT "https://YOUR_ES_URL:9200/_index_template/global-user-ilm-template" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "index_patterns": ["*"],
+    "priority": 0,
+    "template": {
+      "settings": {
+        "index.lifecycle.name": "global-user-ilm"
+      }
+    }
+  }'
+
+
+Exclude system indices (CRITICAL)
+
+curl -u elastic:YOUR_PASSWORD \
+  -X PUT "https://YOUR_ES_URL:9200/_index_template/system-index-exclusion" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "index_patterns": [".*"],
+    "priority": 1000,
+    "template": {
+      "settings": {
+        "index.lifecycle.name": null
+      }
+    }
+  }'
+
+Apply ILM to existing indices (portable + safe)
+
+curl -u elastic:YOUR_PASSWORD \
+  -X PUT "https://YOUR_ES_URL:9200/_all/_settings" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "index.lifecycle.name": "global-user-ilm"
+  }'
+
+This configuration applies lifecycle management and searchable cold storage
+to all user indices on any Elasticsearch cluster,
+while automatically excluding all system and cluster indices.
+
+This is cluster‑agnostic, portable, and Elastic‑supported
+
+

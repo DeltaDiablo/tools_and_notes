@@ -1,0 +1,30 @@
+6. System Documentation Release 
+	CVAH Version 3.9
+		v3.9.0.0 Guides
+			v3.9.0.0 Deployable Interceptor Platform (DIP) Operations Guide
+			
+			after section 5.2 Check Available Space https://confluence.levelup.cce.af.mil/spaces/THISISCVAH/pages/679175151/v3.9.0.0+Deployable+Interceptor+Platform+DIP+Operations+Guide#v3.9.0.0DeployableInterceptorPlatform(DIP)OperationsGuide-CheckAvailableSpace
+			
+			Section 5.2.1 Create Disk Capacity Alert
+			
+			The purpose of this action is to create a custom alert for disk space usage based on your requirements or needs.
+			
+			1. Login to Kibana and select Hunt
+			2. Under the Management section select "Stack Management" and open the Stack Management interface
+			3. Under the "Alerts and Insights" on the left menu select the Rules and open the Rules interface
+			4. Select the Create Rule button in the top right to start creating a rule
+			5. give the new rule a name for your reference
+			6. Type "Disk Usage" in the "Select Rule Type" query box 
+			7. Select "Disk Usage" under stack monitoring
+			8. Set the "Notify when Disk capacity is over" text box to 49% (or whatever percentage you want to be alerted to) and set the "Check every" box to 1  and the interval to minute
+			9. Scroll down and under "Actions" select "Server Log"
+			10. Set the values for the following Actions
+				- Server Log connector: Monitoring: Write to Kibana log
+				- Action frequency: On status changes
+				- Level: Warning
+			11. Click the "Save" Button
+
+
+
+			Reference Comments section for images with steps in https://jira.levelup.cce.af.mil/browse/THISISCVAH-19070
+			

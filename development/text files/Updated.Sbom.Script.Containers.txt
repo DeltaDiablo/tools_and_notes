@@ -1,0 +1,50 @@
+####
+## Updated scripts to run syft for container registry
+## Requires
+##  Update MY_CONTROLLER_IP
+##  Run in target folder for container sboms
+export my_cvah_version="v3.8.4.0"
+export my_hostname="$(hostname -s)"
+export my_spdx="spdx-json"
+export my_spdx_ver="2.3"
+export my_cyclonedx="cyclonedx-json"
+export my_cyclonedx_ver="1.6"
+export MY_CONTROLLER_IP="10.40.46.64"
+export MY_REGISTRY_IP=${MY_CONTROLLER_IP}
+export MY_REGISTRY_PORT="5000"
+curl -sX GET http://${MY_CONTROLLER_IP}:${MY_REGISTRY_PORT}/v2/_catalog \
+| sed 's/["{}\]//g' \
+| sed 's/^repositories\:\[//g' \
+| sed 's/\]$//g' \
+| sed 's/,/\n/g' \
+| xargs -I {} curl -sX GET http://${MY_CONTROLLER_IP}:${MY_REGISTRY_PORT}/v2/{}/tags/list \
+| sed 's/["{}\]//g' \
+| sed 's/^name\://g' \
+| sed 's/,tags\:\[/\:/g' \
+| sed 's/\]$//g' \
+| sed -E 's/^(.*)$/\1 \1/' \
+| sed -E 's/\/(.*) /_\1 /g' \
+| sed -E 's/\/(.*) /_\1 /g' \
+| sed -E 's/\/(.*) /_\1 /g' \
+| sed -E 's/\/(.*) /_\1 /g' \
+| sed -E 's/^(.*) (.*)$/syft scan --quiet --from registry -o \$\{my_cyclonedx\}\@\$\{my_cyclonedx_ver\}=\$\{my_cvah_version\}-sbom-\1-\$\{my_spdx\}_v\$\{my_spdx_ver\}.json \$\{MY_CONTROLLER_IP\}\:\$\{MY_REGISTRY_PORT\}\/\2/' \
+| xargs -I {} sh -c "{}"
+#
+curl -sX GET http://${MY_CONTROLLER_IP}:${MY_REGISTRY_PORT}/v2/_catalog \
+| sed 's/["{}\]//g' \
+| sed 's/^repositories\:\[//g' \
+| sed 's/\]$//g' \
+| sed 's/,/\n/g' \
+| xargs -I {} curl -sX GET http://${MY_CONTROLLER_IP}:${MY_REGISTRY_PORT}/v2/{}/tags/list \
+| sed 's/["{}\]//g' \
+| sed 's/^name\://g' \
+| sed 's/,tags\:\[/\:/g' \
+| sed 's/\]$//g' \
+| sed -E 's/^(.*)$/\1 \1/' \
+| sed -E 's/\/(.*) /_\1 /g' \
+| sed -E 's/\/(.*) /_\1 /g' \
+| sed -E 's/\/(.*) /_\1 /g' \
+| sed -E 's/\/(.*) /_\1 /g' \
+| sed -E 's/^(.*) (.*)$/syft scan --quiet --from registry -o \$\{my_cyclonedx\}\@\$\{my_cyclonedx_ver\}=\$\{my_cvah_version\}-sbom-\1-\$\{my_cyclonedx\}_v\$\{my_cyclonedx_ver\}.json \$\{MY_CONTROLLER_IP\}\:\$\{MY_REGISTRY_PORT\}\/\2/' \
+| xargs -I {} sh -c "{}"
+#

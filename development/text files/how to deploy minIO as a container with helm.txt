@@ -1,0 +1,53 @@
+Deploying MinIO on Kubernetes using Helm is a straightforward process and allows you to set up a scalable object storage quickly. Below is a complete guide.
+Prerequisites
+Kubernetes cluster up and running (any cloud provider or local, e.g., minikube).
+Helm 3 installed and configured.
+kubectl configured to manage your cluster.
+Step 1: Add MinIO Helm Repository
+helm repo add minio https://charts.min.io/
+helm repo update
+Step 2: Create a Namespace (Optional)
+It’s best practice to deploy MinIO in a dedicated namespace:
+kubectl create namespace minio
+Step 3: Deploy MinIO using Helm
+You can deploy a simple MinIO pod using the Helm chart:
+helm install my-minio minio/minio \
+  --namespace minio \
+  --set accessKey=minioadmin \
+  --set secretKey=minioadmin \
+  --set persistence.enabled=false
+my-minio: Helm release name.
+accessKey & secretKey: Credentials for MinIO.
+persistence.enabled=false: No persistent storage; for production, enable persistence and configure storage.
+Step 4: Verify Deployment
+Check that the pod is running:
+kubectl get pods -n minio
+Access the MinIO service using port-forwarding:
+kubectl port-forward svc/my-minio 9000:9000 -n minio
+Then open in a browser: http://localhost:9000 and login with the credentials above.
+Step 5: Optional: Enable Persistent Storage
+For production-grade deployments, enable persistence by specifying a storage class or PVC:
+helm install my-minio minio/minio \
+  --namespace minio \
+  --set accessKey=minioadmin \
+  --set secretKey=minioadmin \
+  --set persistence.enabled=true \
+  --set persistence.size=10Gi \
+  --set persistence.storageClass=standard
+Step 6: Scale MinIO for High Availability (Optional)
+For high availability, you can enable distributed mode with multiple replicas:
+helm install my-minio minio/minio \
+  --namespace minio \
+  --set accessKey=minioadmin \
+  --set secretKey=minioadmin \
+  --set replicas=4 \
+  --set persistence.enabled=true \
+  --set persistence.size=10Gi
+Step 7: Cleanup
+To uninstall MinIO when no longer needed:
+helm uninstall my-minio -n minio
+kubectl delete namespace minio
+Notes
+Adjust replicas, storage, and resources according to your cluster size.
+For production, always enable TLS, persistent volumes, and distributed mode.
+MinIO Helm chart supports advanced configurations like gateway mode, routing policies, and monitoring.

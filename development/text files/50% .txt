@@ -1,0 +1,253 @@
+To create a high watermark alert for Elasticsearch, you can utilize the Kibana alerting feature or the Watcher API to monitor disk usage and trigger alerts when thresholds are reached.
+Steps to Create a High Watermark Alert in Kibana
+Access Kibana:
+Open your Kibana interface and navigate to Stack Management.
+Go to Alerts and Connectors:
+Select Rules and Connectors under the Stack Management section.
+Create a New Rule:
+Click on Create rule, then choose an appropriate rule type such as Index threshold or Elasticsearch query. For high watermark alerts, the Index threshold rule is typically used to monitor disk usage.
+Define Conditions:
+Set conditions that reflect the high watermark thresholds for your storage. For example, you can define a rule to trigger when any node's disk usage exceeds a specified percentage (e.g., 90%):
+Example condition:
+Type: Disk usage
+Threshold: Greater than 90%
+Set Actions:
+Configure what actions to take when the alert fires. You can set up notifications through email, Slack, or other connectors, and customize message content using variables like { {context.timestamp}} or { {context.node}} to provide context in alerts.
+Schedule:
+Determine how frequently Kibana should evaluate the rule, ensuring it runs at suitable intervals to catch approaching high watermarks in time.
+Save the Rule:
+Once you’ve configured all settings, save the rule. Kibana will now actively monitor the specified conditions and alert you when the threshold is exceeded.
+Using Watcher API (Optional)
+If you're working through the Elasticsearch REST API without Kibana, you can also utilize the Watcher API to create alerts. Here's a simplified approach:
+Create Watcher:
+Use the API to define a watchdog that checks disk usage and sends alerts based on the criteria defined.
+PUT _watcher/watch/high_watermark_alert
+{
+  "trigger": {
+    "schedule": {
+      "interval": "10m"
+    }
+  },
+  "input": {
+    "search": {
+      "request": {
+        "indices": ["_all"],
+        "body": {
+          "query": {
+            "range": {
+              "_disk_usage": {
+                "gte": 90
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "actions": {
+    "email_admin": {
+      "email": {
+        "to": "admin@example.com",
+        "subject": "High Watermark Alert",
+        "body": {
+          "text": "Disk usage has exceeded the defined high watermark threshold."
+        }
+      }
+    }
+  }
+}
+Best Practices for Managing High Watermark Alerts
+Monitor regularly: Ensure that alerts are functioning correctly and adjust thresholds based on your environment's behavior.
+Integrate with other monitoring: Link disk alerts with overall system health monitoring for a comprehensive observability strategy.
+Review and optimize: Regularly update your alert rules and notifications to meet changes in usage patterns and system requirements.
+
+
+
+to create a 50% alert for disk usage, 
+
+1. click the hamburger button in Kibana ui to show the side menu, (on the top left side)
+
+2. Click "Stack Management" and the stack management interface will open up
+
+3. click Rules under the "Alerts and Insights" on the left menu and the rules page will open with the Rules list showing
+
+4. type "disk" in the search bar and press enter, then you should see the Disk Usage rule in the list of rules
+
+5. click the three dots on the right side of the disk usage rule and select clone rule
+
+6. click the pencil on the "Disk Usage [Clone]" on the right
+
+7. change the name from "Disk Usage [clone]" to "Half Disk Usage"
+
+8. set the "Notify when disk capacity is over" value to 49% 
+
+9. click the save button on the lower right, DO NOT CHANGE ANY OTHER VARIABLES!
+
+you now have an alert for any time your disk usages is 50% or greater 
+
+
+
+to duplicate or "clone"
+
+
+PUT _watcher/watch/half_disk_usage_alert
+{
+  "trigger": {
+    "schedule": { "interval": "1m" }  // Runs every minute
+  },
+  "input": {
+    "search": {
+      "request": {
+        "indices": ["metricbeat-*"],  // Adjust index pattern accordingly
+        "body": {
+          "size": 0,
+          "query": {
+            "bool": {
+              "filter": [
+                { "term": { "metricset.name": "filesystem" } },
+                { "term": { "system.fs.mount_point": "/" } }  // Monitor root partition
+              ]
+            }
+          },
+          "aggs": {
+            "avg_disk_used_percent": {
+              "avg": {
+                "field": "system.fs.used.pct"  // Metricbeat field for disk usage percentage (0-1)
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "condition": {
+    "script": {
+      "source": "return ctx.payload.aggregations.avg_disk_used_percent.value > 0.4999;",  // Alert if > 50%
+      "lang": "painless"
+    }
+  },
+  "actions": {
+    "log_high_disk_usage": {
+      "logging": {
+        "text": "High disk usage detected: {{ctx.payload.aggregations.avg_disk_used_percent.value}}"
+      }
+    }
+  }
+}
+
+
+PUT _watcher/watch/half_disk_usage_alert
+{
+  "trigger": {
+    "schedule": { "interval": "1m" } 
+  },
+  "input": {
+    "http": {
+      "request": {
+        "host": "localhost",
+        "port": 9200,
+        "method": "GET",
+        "path": "/_nodes/stats/fs"
+      }
+    }
+  },
+  "condition": {
+    "script": {
+      "source": """
+        def nodes = ctx.payload.nodes;
+        for (node in nodes.values()) {
+          def total = node.fs.total.total_in_bytes;
+          def available = node.fs.total.available_in_bytes;
+          def usedPercent = ((total - available) * 100) / total;
+          if (usedPercent > 50) {
+            return true;
+          }
+        }
+        return false;
+      """
+    }
+	
+  },
+  "actions": {
+    "log_high_disk_usage": {
+      "logging": {
+        "text": "Disk usage exceeded 50%: {{ctx.payload.aggregations.avg_disk_used_percent.value}}"
+      }
+    }
+  }
+}
+
+Elasticsearch, when integrated with Kibana, offers built-in alerting capabilities that allow you to monitor cluster health metrics such as disk usage. You can set up alerts using the Kibana Alerting framework without needing custom plugins or scripts. Here’s a step-by-step guide on how to create a disk usage threshold alert for Elasticsearch nodes and trigger popup notifications (in Kibana) using the default alerting system.
+
+Step 1: Pre-Requisites
+Elasticsearch and Kibana installed and running (typically 7.7 or above, which supports Kibana alerting features).
+Kibana user with sufficient permissions to create alerts.
+Disk usage metrics must be available, usually via the .monitoring-es-* indices if you use Elasticsearch monitoring or via Metricbeat.
+
+Step 2: Checking Disk Usage Data
+
+Disk usage info for nodes comes from node stats API and is exposed through monitoring indices or Metricbeat:
+You can query: _cat/nodes?v&h=name.disk.used_percent or review monitoring dashboards.
+Alternatively, Metricbeat system module or Elasticsearch monitoring module sends node disk use stats.
+You need this data source in Kibana for alerting.
+
+Step 3: Navigate to the Kibana Alerts UI
+Open Kibana and go to Stack Management > Rules and Connectors.
+Click Create rule (or “Create alert” in older versions).
+Step 4: Create the Disk Usage Alert Rule
+Select Alert Type:
+Choose Elasticsearch query if you want to use a custom query on monitoring indices, or
+Use Metric threshold alert if available for node disk usage metrics.
+Kibana, by default, comes with some alert types like "ML job anomaly detection," "Index threshold," or "Metric threshold" which suits this case.
+Set Condition:
+For Metric threshold:
+Index pattern: .monitoring-es-* or metricbeat-* (based on your setup).
+Metric: select disk usage percentage or the relevant field (e.g., node_stats.fs.total.used_percent or system.fs.used.pct).
+Threshold: e.g., alert when disk usage is above 85%.
+Time range: e.g., last 5 minutes.
+Define Trigger:
+Set how frequently the alert checks these metrics (every 1 minute is typical).
+Step 5: Configure Actions to Provide Popup Notification
+Kibana does not have native "popup" alerts on its UI like desktop notifications but supports various action types: email, webhook, Slack, PagerDuty, or in-app notifications.
+To get a popup-style alert inside Kibana:
+Choose the "Send to Kibana" action type (called "Send notification" or "Kibana built-in action").
+This sends an alert notification to Kibana’s Alerts and Actions UI (bell icon at top right).
+Users can see these alerts and get notified as soon as they visit Kibana.
+Alternative: Use Slack/webhook/email actions to send real-time external notification.
+Step 6: Save and Enable the Rule
+Once configured, save the alert rule. It immediately becomes active and starts evaluating the threshold condition.
+
+
+PUT _watcher/watch/disk_usage_watch
+{
+  "trigger": {
+    "schedule": {
+      "interval": "1m"
+    }
+  },
+  "input": {
+    "http": {
+      "request": {
+        "method": "GET",
+        "path": "_cat/allocation?v&h=disk.percent",
+        "host": "localhost",
+        "port": 9200
+      }
+    }
+  },
+  "condition": {
+    "script": {
+      "source": "return Integer.parseInt(ctx.payload.result.trim()) > 49;"
+    }
+  },
+  "actions": {
+    "log": {
+      "logging": {
+        "text": "Disk usage exceeded 50% on one or more nodes!"
+      }
+    }
+  }
+}
+
+
+core/playbooks/roles/elasticsearch/files/role-mappings/half_disk_usage_alert.json

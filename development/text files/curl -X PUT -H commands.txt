@@ -1,0 +1,35 @@
+curl -X PUT -H 
+"Authorization: ApiKey $ELASTIC_API_KEY"
+ -H "Content-Type: application/json" -d 
+'{"name":"<tfplenum-{now/d{yyyy-MM-dd}}>",
+"schedule":"0 0 2 * * ?",
+"repository":"elasticsearch",
+"config":{
+"include_global_state":true,
+"feature_states":[]
+},
+"retention":{
+"expire_after":"60d",
+"min_count":1,
+"max_count":120
+}
+}' 
+"https://elasticsearch.default.svc.cluster.local:9200/_slm/policy/Tfplenum"
+
+
+DEV TOOL 
+PUT _slm/policy/Tfplenum
+{
+  "name": "<tfplenum-{now/d{yyyy-MM-dd}}>",
+  "schedule": "0 0 2 * * ?",
+  "repository": "elasticsearch",
+  "config": {
+    "include_global_state": true,
+    "feature_states": []
+  },
+  "retention": {
+    "expire_after": "60d",
+    "min_count": 1,
+    "max_count": 120
+  }
+}

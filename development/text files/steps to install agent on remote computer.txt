@@ -1,0 +1,99 @@
+steps 
+
+1. add the hosts settings to the host file on the computer
+	
+```bash
+sudo vi /etc/hosts
+```
+
+this will open um the hosts file
+
+2. press the i on the keyboard to insert
+
+then put these variables in the file
+```bash
+# GIP Development
+10.9.2.53 kibana.gip9.local
+10.9.2.53 neuvector.gip9.local
+10.9.2.53 artifacts.gip9.local
+10.9.2.53 elasticsearch.gip9.local
+10.9.2.53 fleet.gip9.local
+```
+
+3. then press escape key in top left of keyboard
+
+
+4. then type :wq and press enter
+   this will save the hosts file,
+
+5. next you will need the TLS certificate from the Istio gateway to trust it
+
+6. go to the Kubernetes instance ( i sshed in via vs code to 10.9.2.12)
+
+7. export the certificate for the kubectl command line
+   export KUBECONFIG=gip9.kubeconfig
+
+8. press enter and it should allow you to run kubectl commands on that terminal
+
+9. put in this command to get the certificate
+   ```bash
+   kubectl -n istio-system get secret gateway-ingress-cert-secret   -o jsonpath='{.data.ca\.crt}' | base64 -d
+   ```
+
+10. then copy the certificate and go back to the vm and run this command
+    ```bash
+    sudo vi /etc/pki/ca-trust/source/anchors/istio-root-ca.crt
+    ```
+
+11. now it should open a file for you, press i on the keyboard to insert the file
+
+12. PASTE the certificate in the file
+
+13. press the escape key on the keyboard
+
+14. type :wq and press enter
+
+15. the command line should appear and then run this command
+    ```bash
+    sudo update-ca-trust
+    ```
+
+16. now attempt to check if the fleet server is reachable with this command
+    ```bash
+    curl https://fleet.gip9.local/api/status
+    ```
+    you should see a result like this
+    {"name":"fleet-server","status":"HEALTHY"}
+    this means you can now access the fleet server no issue from cert trust
+
+17. now the fun part open up kibana and go to fleet
+18. click the add in the top right of the fleet component
+19. select agent
+20. select your installation
+    it should look something like this
+    ```bash
+    curl -L -O https://artifacts.gip9.local/downloads/beats/elastic-agent/elastic-agent-9.4.3-linux-x86_64.tar.gz 
+    tar xzvf elastic-agent-9.4.3-linux-x86_64.tar.gz
+    cd elastic-agent-9.4.3-linux-x86_64
+    sudo ./elastic-agent install --url=https://fleet-server-agent-http.elasticsearch.svc:8220 --enrollment-token=eDFSSS1KOEJGTU03blJwRWxSQUc6S2ZSR0txWG10cTFidjZ2ODFYYXBnUQ==
+    ```
+
+21. if the url is not https://fleet.gip9.local change it to that, so it should look something like this
+    ```bash
+    curl -L -O https://artifacts.gip9.local/downloads/beats/elastic-agent/elastic-agent-9.4.3-linux-x86_64.tar.gz 
+    tar xzvf elastic-agent-9.4.3-linux-x86_64.tar.gz
+    cd elastic-agent-9.4.3-linux-x86_64
+    sudo ./elastic-agent install --url=https://fleet.gip9.local --enrollment-token=eDFSSS1KOEJGTU03blJwRWxSQUc6S2ZSR0txWG10cTFidjZ2ODFYYXBnUQ==
+    ```
+
+22. now take that command and paste it into the vm and run it
+
+23. answer any questions that may occur on the VM
+
+24. and you will see the agent in the fleet the instant it shows up
+    BE PATIENT! it may take some time to update on the kibana side
+    it should go green eventually unless you have something misconfigured
+
+sudo elastic-agent status
+
+sudo /opt/Elastic/Agent/elastic-agent status

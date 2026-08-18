@@ -1,0 +1,81 @@
+fleet:
+        isAirGapped: true
+        registryUrl: "{{ fleet_epr_service_url }}"
+        agents:
+          tlsCheckDisabled: true
+          fleet_server:
+            hosts:
+              - "https://{{ fleet_server_deployment_name }}.default.svc.cluster.local:{{ fleet_server_port }}"
+        outputs:
+          - id: fleet-server-output
+            name: fleet-server-output
+            type: elasticsearch
+            hosts:
+              - "https://{{ elastic_fqdn }}:9200"
+            is_default: true
+
+
+
+curl \
+  --verbose \
+  --user $(echo elastic:$(kubectl get secret tfplenum-es-elastic-user -o=jsonpath='{.data.elastic}' | base64 --decode)) \
+  --request POST \
+  --url "https://${KIBANA_HOST}/api/fleet/agent_policies?sys_monitoring=true" \
+  --header 'Accept: */*' \
+  --header 'Cache-Control: no-cache' \
+  --header 'Connection: keep-alive' \
+  --header 'Content-Type: application/json' \
+  --header 'kbn-xsrf: xxx' \
+  --data '{
+  "id": "fleet-server",
+  "name": "Agent policy 1",
+  "description": "",
+  "namespace": "default",
+  "monitoring_enabled": [
+    "logs",
+    "metrics"
+  ]
+}'
+
+
+kubectl get pvc --all-namespaces -o json | \
+jq '.items[] | {name: .metadata.name, namespace: .metadata.namespace}' -c | \
+while read i; do
+  name=$(echo $i | jq -r '.name')
+  ns=$(echo $i | jq -r '.namespace')
+  kubectl patch pvc $name -n $ns -p '{"metadata":{"finalizers":null}}' \
+done; \
+kubectl get pv -o json | \
+jq '.items[] | .metadata.name' -r | \
+while read pv; do
+  kubectl patch pv $pv -p '{"metadata":{"finalizers":null}}'
+done; \
+kubectl delete pvc --all --all-namespaces; && kubectl delete pv --all --all-namespaces
+
+
+
+kubectl get pv -o json | jq '.items[] | .metadata.name' -r | while read pv; do   kubectl patch pv $pv -p '{"metadata":{"finalizers":null}}'; done;
+kubectl get pvc -o json | jq '.items[] | .metadata.name' -r | while read pv; do   kubectl patch pv $pv -p '{"metadata":{"finalizers":null}}'; done;
+kubectl delete pvc --all --all-namespaces
+kubectl delete pv --all --all-namespaces
+
+
+kubectl get pv -o json | jq -r '.items[].metadata.name' | while read pv; do kubectl patch pv "$pv" -p '{"metadata":{"finalizers":null}}'; done && kubectl get pvc -A -o json | jq -r '.items[].metadata.name' | while read pvc; do kubectl patch pvc "$pvc" -p '{"metadata":{"finalizers":null}}'; done && kubectl delete pvc --all --all-namespaces && kubectl delete pv --all && kubectl delete statefulsets --all && kubectl delete deployments --all
+
+
+curl -k -X GET "https://kibana.thomaslandev/api/fleet/agent_policies?sys_monitoring=true" \
+  -u "elastic:7n6Zja60985BIr6Ie40iNFrh" \
+  -H "Content-Type: application/json" \
+  -H "kbn-xsrf: true" 
+
+curl -k -X POST "https://kibana.thomaslandev/api/fleet/package_policies" \
+  -u "elastic:7n6Zja60985BIr6Ie40iNFrh" \
+  -H "Content-Type: application/json" \
+  -H "kbn-xsrf: true" \
+  -d '{
+    "name": "fleet_server-1",
+    "description": "tfplenum fleet server",
+    "package": {
+      "name": "fleet_server"
+    }
+  }'

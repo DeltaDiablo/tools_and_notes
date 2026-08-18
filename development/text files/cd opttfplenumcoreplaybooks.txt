@@ -1,0 +1,28 @@
+cd /opt/tfplenum/core/playbooks
+ansible-playbook site.yml --tags reset
+
+# Delete all elasticsearch PVCs (named elasticsearch-data-<pod>)
+kubectl delete pvc --all -n default
+
+# Confirm they're gone
+kubectl get pvc -A
+
+kubectl delete pv --all
+
+kubectl get all -A
+kubectl get pvc -A
+kubectl get pv
+helm ls --all-namespaces
+
+ansible-playbook site.yml
+
+
+checking the ES Passowrd
+
+kubectl get pods -n default
+kubectl get secret tfplenum-es-elastic-user -n default
+kubectl get secret tfplenum-es-elastic-user -n default -o=jsonpath='{.data.elastic}' | base64 --decode
+
+checking the elasticsearch instance
+
+KIT_DOMAIN="thomaslandev"; ES_PASS=$(kubectl get secret tfplenum-es-elastic-user -o jsonpath='{.data.elastic}' | base64 --decode); curl -k -u elastic:"$ES_PASS" "https://elasticsearch.${KIT_DOMAIN}:9200/"

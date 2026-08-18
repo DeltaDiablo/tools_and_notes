@@ -1,0 +1,42 @@
+
+
+ssh into the controller!
+
+navigate to the home directory
+then
+```bash
+cd opt/tfplenum
+```
+then
+```bash
+activate_pyenv 
+```
+then
+
+```bash
+cd component-builder
+```
+
+```bash
+python3 update_charts.py --chart local
+```
+
+# List what's in ChartMuseum
+curl -k https://localhost/chartmuseum/api/charts/<whatever kit object>
+
+curl -k https://localhost/chartmuseum/api/charts/<whatever kit object>
+
+#remove the version
+curl -k -X DELETE https://localhost/chartmuseum/api/charts/<whatever kit object>/<version to remove> -u admin
+
+#stop the service
+systemctl stop tfplenum-backend.service
+# Clear any cache files if they exist
+rm -rf /var/cache/tfplenum-backend/* 
+#restart the service
+systemctl start tfplenum-backend.service
+
+# check to see if the service is running
+systemctl is-active tfplenum-backend.service
+
+

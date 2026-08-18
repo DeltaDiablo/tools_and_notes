@@ -1,0 +1,160 @@
+External Sensor Support Addon Build Order
+=========================================
+
+INSTALL ORDER 0
+---------------
+External Fleet Server
+
+apiVersion: agent.k8s.elastic.co/v1alpha1
+kind: Agent
+metadata:
+  name: external-fleet-server
+  namespace: "{{.spectro.var.elastic_namespace}}"
+
+spec:
+  version: "{{.spectro.var.elasticsearch_version}}"
+
+  image: "{{.spectro.var.elastic_agent_image}}:{{.spectro.var.elasticsearch_version}}"
+
+  mode: fleet
+
+  fleetServerEnabled: true
+
+  policyID: external-fleet-server-policy
+
+  kibanaRef:
+    name: kibana
+
+  elasticsearchRefs:
+    - name: es
+
+  deployment:
+    replicas: 1
+    podTemplate:
+      spec:
+        containers:
+          - name: agent
+            imagePullPolicy: Always
+
+
+INSTALL ORDER 1
+---------------
+External Fleet DestinationRule
+
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: external-fleet-server
+  namespace: "{{.spectro.var.elastic_namespace}}"
+spec:
+  host: external-fleet-server-agent-http.{{.spectro.var.elastic_namespace}}.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: SIMPLE
+      insecureSkipVerify: true
+
+
+INSTALL ORDER 2
+---------------
+External Fleet VirtualService
+
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: external-fleet
+  namespace: "{{.spectro.var.elastic_namespace}}"
+spec:
+  gateways:
+    - istio-system/shared-gateway
+
+  hosts:
+    - external-fleet.{{.spectro.var.host}}
+
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: external-fleet-server-agent-http.{{.spectro.var.elastic_namespace}}.svc.cluster.local
+            port:
+              number: 8220
+      headers:
+        request:
+          set:
+            X-Forwarded-Proto: https
+
+
+INSTALL ORDER 3
+---------------
+External Elasticsearch DestinationRule
+
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: external-elasticsearch
+  namespace: "{{.spectro.var.elastic_namespace}}"
+spec:
+  host: es-es-http.{{.spectro.var.elastic_namespace}}.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: SIMPLE
+      insecureSkipVerify: true
+
+
+INSTALL ORDER 4
+---------------
+External Elasticsearch VirtualService
+
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: external-elasticsearch
+  namespace: "{{.spectro.var.elastic_namespace}}"
+spec:
+  gateways:
+    - istio-system/shared-gateway
+
+  hosts:
+    - elasticsearch.{{.spectro.var.host}}
+
+  http:
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: es-es-http.{{.spectro.var.elastic_namespace}}.svc.cluster.local
+            port:
+              number: 9200
+      headers:
+        request:
+          set:
+            X-Forwarded-Proto: https
+
+
+NEXT STEPS
+----------
+Install Order 5:
+  Create Fleet Output: external-agent-policy
+
+Install Order 6:
+  Create Fleet Server Policy: external-fleet-server-policy
+
+Install Order 7:
+  Create Agent Policy: external-sensor
+
+Install Order 8:
+  Attach Elastic Defend package policy
+
+Install Order 9:
+  Generate enrollment token for external-sensor
+
+Key Design Goal:
+  Keep internal Fleet completely separate from external Fleet.
+  External endpoints should use:
+
+    https://external-fleet.<host>
+    https://elasticsearch.<host>
+
+  and the external-elasticsearch Fleet output.

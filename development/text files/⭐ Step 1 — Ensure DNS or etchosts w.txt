@@ -1,0 +1,141 @@
+⭐ Step 1 — Ensure DNS or /etc/hosts works
+Your Fleet Server will advertise itself by hostname.
+Check resolution from anywhere agents will run:
+Shell
+
+ping fleet-server-1.thomaslandev
+
+
+If this fails, add an entry on each machine:
+10.40.15.36   fleet-server-1.thomaslandev
+
+
+⭐ Step 2 — Ensure Elasticsearch is reachable from the VM
+From fleet-server-1.thomaslandev test:
+Shell
+
+curl -k https://<elasticsearch-k8s-service>:9200
+If you're using ECK, this is often:
+https://elasticsearch-es-http.default.svc:9200
+
+If needed, expose the cluster with:
+
+A Kubernetes LoadBalancer, or
+An Ingress, or
+A NodePort
+
+
+⭐ Step 3 — Get your Fleet enrollment token
+In Kibana:
+Management → Fleet → Settings → Fleet Server Hosts → Generate Enrollment Token
+Copy the output token (you’ll use it next).
+
+⭐ Step 4 — Install Elastic Agent on the VM as Fleet Server
+SSH into the VM:
+Shell
+curl -L -O https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.15.0-linux-x86_64.tar.gztar xzvf elastic-agent-8.15.0-linux-x86_64.tar.gzcd elastic-agent-8.15.0-linux-x86_64
+Now enroll it as a Fleet Server:
+Shell
+
+sudo ./elastic-agent install \  --fleet-server-es=https://<elasticsearch-url>:9200 \  --fleet-server-service-token=<SERVICE_TOKEN_FROM_KIBANA> \  --fleet-server-policy=<POLICY_ID> \  --fleet-server-host=https://fleet-server-1.thomaslandev:8220
+
+Replace:
+
+<elasticsearch-url> = your K8s ES HTTPS endpoint
+<SERVICE_TOKEN_FROM_KIBANA> = token from Kibana
+<POLICY_ID> = usually the “Fleet Server Policy”
+
+
+⭐ Step 5 — Certificates (IMPORTANT)
+Fleet Server requires valid TLS. You have two options:
+
+Option A — Use self-generated certs (most common)
+On the VM:
+/etc/elastic-agent/certs/fleet-server.crt
+/etc/elastic-agent/certs/fleet-server.key
+
+Ensure the certificate SAN includes:
+DNS: fleet-server-1.thomaslandev
+IP: 10.40.15.36
+
+Then reinstall Fleet with:
+Shellsudo ./elastic-agent install \  --fleet-server-es=https://<elasticsearch-url>:9200 \  --fleet-server-cert=/etc/elastic-agent/certs/fleet-server.crt \  --fleet-server-cert-key=/etc/elastic-agent/certs/fleet-server.key \  --fleet-server-insecure-http=false \  --fleet-server-host=https://fleet-server-1.thomaslandev:8220 \  --fleet-server-service-token=<TOKEN>Show more lines
+
+Option B — Temporarily allow insecure (only for testing!)
+Shellsudo ./elastic-agent install \  --fleet-server-es=https://<elasticsearch-url>:9200 \  --fleet-server-insecure-http \  --fleet-server-insecure-es \  --fleet-server-service-token=<TOKEN> \  --fleet-server-host=https://fleet-server-1.thomaslandev:8220Show more lines
+
+⭐ Step 6 — Verify in Kibana
+Go to:
+Management → Fleet → Fleet Servers
+You should now see:
+fleet-server-1.thomaslandev — Healthy
+
+Then agents can enroll:
+https://fleet-server-1.thomaslandev:8220
+
+
+🎉 You now have a hybrid Fleet setup
+✔ Elasticsearch in Kubernetes
+✔ Fleet Server on VM
+✔ Agents talk to Fleet Server
+
+Below is a clean, correct explanation with what you need to change.
+
+✅ Does using an Elasticsearch username + password affect Fleet Server?
+No negative impact at all.
+Elastic Agent / Fleet Server fully supports authenticating to Elasticsearch with:
+
+Service Token (recommended)
+API Key
+Username + Password
+
+If you prefer username/password, Fleet Server will simply authenticate using those credentials instead of a service token.
+
+⭐ How Fleet behaves with username + password
+When using:
+--fleet-server-es https://<es-url>:9200
+--fleet-server-username elastic
+--fleet-server-password <your-password>
+
+Fleet Server will use these credentials every time it communicates with Elasticsearch.
+This is fully supported and common in hybrid deployments (VM Fleet Server + Kubernetes ES).
+
+⭐ Use case: Elasticsearch in Kubernetes + Fleet Server on VM
+Since your Elasticsearch runs inside Kubernetes and Fleet runs on a VM, you just need to provide:
+
+Elasticsearch URL
+Username + Password
+Fleet Server hostname (yours: fleet-server-1.thomaslandev)
+
+Example install command:
+Shell
+
+sudo ./elastic-agent install \  --fleet-server-es=https://<elasticsearch-url>:9200 \  --fleet-server-username=elastic \  --fleet-server-password='<your-password>' \  --fleet-server-host=https://fleet-server-1.thomaslandev:8220 \  --fleet-server-policy=<policy-id>Show more lines
+If using TLS certificates:
+Shell
+
+sudo ./elastic-agent install \  --fleet-server-es=https://<elasticsearch-url>:9200 \  --fleet-server-username=elastic \  --fleet-server-password='<your-password>' \  --fleet-server-cert=/etc/elastic-agent/certs/fleet-server.crt \  --fleet-server-cert-key=/etc/elastic-agent/certs/fleet-server.key \  --fleet-server-host=https://fleet-server-1.thomaslandev:8220 \  --fleet-server-policy=<policy-id>Show more lines
+
+⭐ What you don’t need when using username/password
+If you're using username/password:
+You do not need:
+
+A service token
+--fleet-server-service-token=...
+
+You only need:
+
+--fleet-server-username
+--fleet-server-password
+
+
+⭐ Recommended practice
+Elastic recommends:
+Service Tokens for Fleet Servers
+because:
+
+They have minimal privilege
+Easier to rotate
+Less risky than using the elastic superuser
+
+But username/password works perfectly if that aligns better with your environment.

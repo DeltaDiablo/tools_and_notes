@@ -1,0 +1,63 @@
+To get the Elasticsearch URL using kubectl, you can follow these steps:
+1. Check the Service Details
+Run the following command to list the services in your namespace and locate the Elasticsearch service:
+
+kubectl get svc --all-namespaces
+
+Look for the service associated with Elasticsearch. It will typically have a name like elasticsearch or something similar. and get the NAMESPACE for that service as well
+
+2. Describe the Service
+To get more details about the service, including its type and ports, use:
+
+kubectl describe svc <service-name>
+
+Replace <service-name> with the name of your Elasticsearch service. This will show you the service's ClusterIP, NodePort, or LoadBalancer IP, depending on its type.
+
+3. Access the URL Based on Service Type
+
+
+3a. If the service type is ClusterIP, it is only accessible within the cluster. Use the ClusterIP and port to access it from other pods.
+http://<ClusterIP>:<port>
+
+
+
+3b. If the service type is NodePort, you can access it externally using the node's IP and the NodePort.
+http://<node-ip>:<NodePort>
+
+
+
+3c. (cvah typically uses this) If the service type is LoadBalancer, you can access it using the external IP provided by the load balancer.
+http://<external-ip>:<port>
+
+
+
+To get the external IP for a LoadBalancer service:
+Bashkubectl get svc <service-name> -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+
+
+4. Port-Forward (Optional)
+If you want to access Elasticsearch locally without exposing it externally, you can use port-forwarding:
+Bashkubectl port-forward svc/<service-name> 9200:9200
+
+Then, access Elasticsearch at:
+http://localhost:9200
+
+This approach is useful for testing or debugging purposes.
+
+
+To get the Elasticsearch URL using kubectl, you can follow these steps:
+
+1. ssh into the controller
+
+2. Check the Service Details
+Run the following command to list the services in your namespace and locate the Elasticsearch service:
+
+kubectl get svc --all-namespaces
+
+Look for the service associated with Elasticsearch. It will typically have a name like elasticsearch or something similar. and get the NAMESPACE for that service as well
+
+3. Modify this command swapping the NAME of the service and the NAMESPACE of that service
+
+ELASTIC_URL=$(kubectl get svc <NAME> -n <NAMESPACE> -o jsonpath='{.metadata.name}.<NAMESPACE>.svc.cluster.local:9200') && echo $ELASTIC_URL
+
+this will output the ELASTIC_URL to your screen where you can copy and paste it

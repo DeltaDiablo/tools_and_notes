@@ -1,0 +1,35 @@
+Jira Ticket: Create Production‑Ready Fleet Policy in Kibana
+Summary:
+Create a production‑ready Fleet Policy in Kibana named tfplenum-fleet-internal to support upcoming Elastic Agent deployment integration on Kubernetes.
+Description:
+We need a new production‑ready Fleet Policy created within Kibana. This ticket covers policy creation only for integrating elastic-agents.Fleet Policy Requirements:
+
+Name: tfplenum-fleet-internal
+Environment: Production
+Must support future deployment of an Elastic Agent running as a service in Kubernetes
+
+Align with existing production standards (permissions, logging, observability)
+Provide the Fleet Policy ID as a comment in this ticket after creation
+
+Acceptance Criteria:
+
+Policy named tfplenum-fleet-internal exists in Kibana → Fleet → Agent Policies
+No integrations attached
+No enrolled agents
+Required tags applied
+
+Priority: Medium
+Requestor: Lester Thomas
+
+
+TEMPLATE_OVA     rocky-controller-9.5-07v-001.ova // rhel 8.10 template.ova // rhel8_template.ova
+
+NIC.PxeDevice.1-1
+
+F8:F2:1E:82:E0:40 F8:F2:1E:85:66:30
+
+4C:D9:8f:9F:BB:B9 F8:F2:1E:85:66:30
+
+
+
+for id in $(vim-cmd vmsvc/getallvms | awk 'NR>1 {print $1}'); do echo -n "VMID $id: "; vim-cmd vmsvc/power.getstate $id | tail -n 1; done

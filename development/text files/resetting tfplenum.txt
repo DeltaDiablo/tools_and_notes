@@ -1,0 +1,45 @@
+Let me check what the reset role does and what PVs/PVCs exist in the codebase so I can give you the right commands.
+
+Reviewed main.yml and searched for volume-related terms
+The ansible reset role doesn't delete PVs/PVCs at all — ECK's Elasticsearch StatefulSet creates them and they survive kubectl delete -f. Here's exactly what to run on the controller after SSHing in:
+
+1. Run the Ansible reset play (cleans up all manifests, helm, secrets):
+
+```bash
+cd /opt/tfplenum/core/playbooks ansible-playbook site.yml --tags reset
+```
+
+2. Then manually delete all PVCs (ECK leaves these behind):
+
+
+# Delete all elasticsearch PVCs (named elasticsearch-data-<pod>)
+```bash
+kubectl delete pvc --all -n default
+```
+# Confirm they're gone
+```bash
+kubectl get pvc -A
+```
+3. If any PVs are stuck in Released/Failed state:
+
+
+kubectl delete pv --all
+4. Verify everything is clean before re-running:
+
+```bash
+kubectl get all -A
+kubectl get pvc -A
+kubectl get pv 
+helm ls --all-namespaces
+```
+5. Then re-run the full playbook:
+
+ 
+ansible-playbook site.yml
+Note: kubectl delete pvc --all -n default will hang if there are pods still holding PVC mounts. 
+The Ansible reset step runs first to remove all workloads, which should release the PVCs and let deletion proceed immediately. 
+
+If a PVC is stuck terminating, remove its finalizer with:
+```bash
+kubectl patch pvc --all --all-namespaces -p '{"metadata":{"finalizers":null}}' && kubectl patch pvc --all --all-namespaces -p '{"metadata":{"finalizers":null}}'
+```

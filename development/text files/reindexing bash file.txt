@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+########################################
+# CONFIG
+########################################
+KIT_DOMAIN="tclan2"
+ELASTICSEARCH_HOST="elasticsearch.${KIT_DOMAIN}:9200"
+TARGET_INDEX="winlogbeat-fixed-0001"
+SOURCE_INDEX="winlogbeat-*"
+PIPELINE="winlogbeat-8.7.0-routing"
+ALIAS="winlogbeat"
+
+ES_USER="elastic:$(kubectl get secret tfplenum-es-elastic-user -o=jsonpath='{.data.elastic}' | base64 --decode)"
+
+CURL="curl -sS -u ${ES_USER} -H Content-Type:application/json"
+
+########################################
+# STEP 1: LIST CURRENT INDICES
+########################################
+echo "==> Current winlogbeat indices"
+curl -u "$ES_USER" "https://${ELASTICSEARCH_HOST}/_cat/indices/${SOURCE_INDEX}?v"
+echo ""
+
+########################################
+# STEP 2: CREATE TARGET INDEX
+########################################
+echo "==> Creating target index: ${TARGET_INDEX}"
+curl -u "$ES_USER" -X PUT "https://${ELASTICSEARCH_HOST}/${TARGET_INDEX}" || true
+echo ""
+
+########################################
+# STEP 3: START REINDEX
+########################################
+echo "==> Starting reindex..."
+REINDEX_RESPONSE=$($CURL -X POST "https://${ELASTICSEARCH_HOST}/_reindex?wait_for_completion=false" -d "{
+  \"source\": { \"index\": \"${SOURCE_INDEX}\" },
+  \"dest\": { \"index\": \"${TARGET_INDEX}\", \"pipeline\": \"${PIPELINE}\" }
+}")
+
+TASK_ID=$(echo "$REINDEX_RESPONSE" | jq -r '.task')
+
+if [[ "$TASK_ID" == "null" ]]; then
+  echo "Failed to start reindex"
+  exit 1
+fi
+
+echo "Reindex task started: $TASK_ID"
+echo ""
+
+########################################
+# STEP 4: WAIT FOR COMPLETION
+########################################
+echo "==> Waiting for reindex to complete..."
+while true; do
+  TASK_STATUS=$($CURL "https://${ELASTICSEARCH_HOST}/_tasks/${TASK_ID}")
+  COMPLETED=$(echo "$TASK_STATUS" | jq -r '.completed')
+
+  if [[ "$COMPLETED" == "true" ]]; then
+    echo "Reindex completed"
+    break
+  fi
+
+  echo "Still running..."
+  sleep 5
+done
+echo ""
+
+########################################
+# STEP 5: VALIDATE DATA
+########################################
+echo "==> Validating reindexed data"
+VALIDATION=$($CURL -X GET "https://${ELASTICSEARCH_HOST}/${TARGET_INDEX}/_search" -d '{
+  "size": 1,
+  "_source": ["event.code","winlog.event_id","winlogbeat.event_id"]
+}')
+
+COUNT=$(echo "$VALIDATION" | jq '.hits.total.value')
+
+if [[ "$COUNT" -eq 0 ]]; then
+  echo "Validation failed: no documents found"
+  exit 1
+fi
+
+echo "Validation passed: ${COUNT} docs found"
+echo ""
+
+########################################
+# STEP 6: CHECK OR CREATE ALIAS
+########################################
+echo "==> Checking alias"
+
+if ! curl -s -u "$ES_USER" "https://${ELASTICSEARCH_HOST}/_alias/${ALIAS}" | grep -q "${ALIAS}"; then
+  echo "Alias missing — creating"
+
+  $CURL -X POST "https://${ELASTICSEARCH_HOST}/_aliases" -d "{
+    \"actions\": [
+      {
+        \"add\": {
+          \"index\": \"${SOURCE_INDEX}\",
+          \"alias\": \"${ALIAS}\"
+        }
+      }
+    ]
+  }"
+
+  echo "Alias created"
+else
+  echo "Alias exists"
+fi
+echo ""
+
+########################################
+# STEP 7: ZERO-DOWNTIME SWITCH
+########################################
+echo "==> Switching alias (ZERO downtime)"
+
+$CURL -X POST "https://${ELASTICSEARCH_HOST}/_aliases" -d "{
+  \"actions\": [
+    {
+      \"remove\": {
+        \"index\": \"${SOURCE_INDEX}\",
+        \"alias\": \"${ALIAS}\"
+      }
+    },
+    {
+      \"add\": {
+        \"index\": \"${TARGET_INDEX}\",
+        \"alias\": \"${ALIAS}\"
+      }
+    }
+  ]
+}"
+
+echo "Alias switched successfully"
+echo ""
+
+########################################
+# SUCCESS MESSAGE
+########################################
+echo "🎉 MIGRATION COMPLETE"
+echo "Alias '${ALIAS}' now points to '${TARGET_INDEX}'"
+echo ""
+
+########################################
+# ROLLBACK COMMAND (PRINT ONLY)
+########################################
+cat <<EOF
+
+ROLLBACK (if needed):
+
+curl -u "$ES_USER" -X POST "https://${ELASTICSEARCH_HOST}/_aliases" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "actions": [
+      {
+        "remove": {
+          "index": "${TARGET_INDEX}",
+          "alias": "${ALIAS}"
+        }
+      },
+      {
+        "add": {
+          "index": "${SOURCE_INDEX}",
+          "alias": "${ALIAS}"
+        }
+      }
+    ]
+  }'
+
+EOF

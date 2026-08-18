@@ -1,0 +1,117 @@
+How It Works
+A snapshot is a backup of one or more indices.
+You can snapshot all indices in a cluster, effectively capturing the state of the entire cluster at a point in time.
+Snapshots are stored in repositories, which can be on shared file systems, AWS S3, Azure, Google Cloud Storage, or HDFS.
+Steps to Snapshot an Entire Cluster
+1. Create a Snapshot Repository
+PUT _snapshot/my_backup
+{
+  "type": "fs",
+  "settings": {
+    "location": "/mount/backups/my_backup",
+    "compress": true
+  }
+}
+!This must be accessible by all nodes
+type can be fs (file system), s3, azure, gcs, etc.
+The location must be available to all nodes (for FS).
+2. Take a Snapshot of All Indices
+PUT _snapshot/my_backup/snapshot_1?wait_for_completion=true
+{
+  "indices": "*",
+  "include_global_state": true
+}
+
+Notes:
+"*" is the wildcard to get all indices
+"include_global_state" captures cluster state -like Templates, aliases and settings 
+
+wait_for_completion=true ensures the request waits until the snapshot is finished.
+include_global_state is recommended if you want to backup cluster metadata.
+3. Verify Snapshot Status
+GET _snapshot/my_backup/snapshot_1
+This returns the status: SUCCESS, IN_PROGRESS, or FAILED.
+4. Restore Snapshot (if needed)
+POST _snapshot/my_backup/snapshot_1/_restore
+{
+  "indices": "*", 
+  "include_global_state": true,
+  "rename_pattern": "(.+)",
+  "rename_replacement": "restored_$1"
+}
+
+You can selectively restore indices or all of them.
+rename_pattern/rename_replacement helps avoid overwriting existing indices.
+Best Practices
+Use incremental snapshots: Elasticsearch only stores changed segments to improve speed and reduce storage.
+Schedule regular snapshots to maintain up-to-date backups.
+Store your repository on a shared, reliable storage accessible by all cluster nodes.
+
+
+Prerequisites
+Cluster permissions: Ensure the user has the following privileges:
+Cluster: monitor, manage_slm, cluster:admin/snapshot, cluster:admin/repository
+Index: all on the indices to snapshot
+Repository: A snapshot repository must be registered and functional (local filesystem, AWS S3, Azure, Google Cloud Storage, or custom plugin-compatible repository).
+Cluster state: The cluster must be running with an elected master node and readable global metadata.
+2. Register a Snapshot Repository
+Example: File System Repository
+PUT _snapshot/my_fs_repo
+{
+  "type": "fs",
+  "settings": {
+    "location": "/mnt/backups/es_snapshots",
+    "compress": true
+  }
+}
+Verify the repository
+POST _snapshot/my_fs_repo/_verify
+This ensures all nodes can access the repository.
+3. Create the Snapshot
+You can create the snapshot manually via API. To name the snapshot (e.g., my_cold_snapshot) and optionally move indices to the cold tier, you specify:
+PUT _snapshot/my_fs_repo/my_cold_snapshot
+{
+  "indices": "index1,index2", 
+  "ignore_unavailable": true,
+  "include_global_state": true
+}
+Parameters:
+indices: Comma-separated indices to include; omit to snapshot all.
+include_global_state: Include cluster state and feature states.
+wait_for_completion=true (optional) to wait synchronously until the snapshot finishes.
+4. Convert Snapshot to Cold Searchable Snapshot
+Starting with Elasticsearch 7.10, searchable snapshots allow you to mount a snapshot in a frozen or cold tier without restoring it to hot nodes:
+Mount snapshot to a cold index
+POST /_searchable_snapshots/mount/my_fs_repo/my_cold_snapshot
+{
+  "index": "my_cold_index",
+  "renamed_index": "my_cold_index_mounted",
+  "storage": "full_copy", 
+  "ignore_unavailable": true,
+  "index_settings": {
+    "index.routing.allocation.require.data": "cold",
+    "index.priority": 50
+  }
+}
+"storage": "full_copy" copies data into the cold node; "shared_cache" uses repository segments directly for read-only access.
+Allocation ensures the index is routed to cold nodes (data: cold).
+5. Verification and Monitoring
+Monitor snapshot progress:
+GET _snapshot/my_fs_repo/my_cold_snapshot/_status
+Monitor searchable snapshot:
+GET /_searchable_snapshots/stats
+6. Best Practices
+Use unique snapshot names (consider date math my_cold_snapshot-<YYYY.MM.DD>).
+Apply SLM (Snapshot Lifecycle Management) if you need automated snapshot creation:
+PUT _slm/policy/daily_cold_snapshots
+{
+  "schedule": "0 30 1 * * ?", 
+  "name": "<daily_cold_snapshot-{now/d}>", 
+  "repository": "my_fs_repo", 
+  "config": { "indices": ["index1","index2"], "ignore_unavailable": true }
+}
+Use index settings or ILM policies to move searchable snapshots to cold tier.
+References
+Snapshot and Restore | Elastic Docs
+Manage snapshot repositories | Elastic Docs
+Searchable Snapshots | Elastic Docs

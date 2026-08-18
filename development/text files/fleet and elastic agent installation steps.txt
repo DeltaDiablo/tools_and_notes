@@ -1,0 +1,164 @@
+Fleet and Elastic agent installation guide
+
+Prerequisites
+A running Elasticsearch and Kibana instance (version 8.x preferred).
+A Linux server (e.g., Ubuntu) for Fleet Server installation.
+Properly configured TLS/SSL certificates (publicly signed or self-signed).
+Network ports open (e.g., 8220 for Fleet Server).
+
+Step-by-Step Installation Overview
+
+1. Configure Fleet Server Output in Kibana
+Open Kibana and navigate to Management > Fleet > Settings > Outputs.
+Edit the output to point to your Elasticsearch URL (e.g., https://your-elasticsearch-host:9200).
+Configure certificate authorities if you use self-signed certificates by pasting your CA certificate directly in the advanced YAML settings.
+Save the settings.
+
+2. Create Fleet Server Policy and Host
+In Kibana, go to Fleet > Fleet Server.
+Create a new Fleet Server policy, select Production as deployment mode.
+Add your Fleet Server host URL (for example, https://fleet.yourdomain.com:8220).
+Generate a service token for Fleet Server installation.
+
+you should see an output like this:
+
+curl -L -O https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.7.0-linux-x86_64.tar.gz
+tar xzvf elastic-agent-8.7.0-linux-x86_64.tar.gz
+cd elastic-agent-8.7.0-linux-x86_64
+sudo ./elastic-agent install \
+  --fleet-server-es=http://localhost:9200 \
+  --fleet-server-service-token=AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE3NTYyMzcwMjk1OTY6UEtTbURkLUdTT0NDMXFYbVM0ZENJQQ \
+  --fleet-server-policy=fleet-server-policy
+
+or generate a service token:
+AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE3NTYyMzc5ODI5Mzk6LTd6N3pMZHBRNDZrSDZBMG9GbFpJdw
+
+now install fleet with this command
+
+curl -L -O https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.7.0-linux-x86_64.tar.gz
+tar xzvf elastic-agent-8.7.0-linux-x86_64.tar.gz
+cd elastic-agent-8.7.0-linux-x86_64
+sudo ./elastic-agent install \
+  --fleet-server-es=http://localhost:9200 \
+  --fleet-server-service-token=AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE3NTYyMzc5ODI5Mzk6LTd6N3pMZHBRNDZrSDZBMG9GbFpJdw \
+  --fleet-server-policy=fleet-server-policy
+  
+  
+3. Prepare SSL Certificates
+If using self-signed certificates, generate them and transfer the relevant certificate and key to the Fleet Server host.
+If using publicly signed certificates, place them on the Fleet Server host in appropriate paths.
+
+4. Install and Start Fleet Server
+Using the service token, construct the Fleet Server install command, including flags for specifying certs:
+--fleet-server-cert, --fleet-server-cert-key
+For self-signed certs, include --fleet-server-es-ca and --certificate-authorities.
+Save this as an install script (e.g., install.sh), run it with root privileges.
+Confirm Fleet Server is registered and healthy in Kibana under Fleet > Agents.
+
+5. Install and Configure Nginx (Optional but Recommended)
+Install Nginx on the same or another server as a reverse proxy for Fleet and Kibana interfaces.
+
+5.a installing and setting up nginx
+	Step 1: Install Nginx
+	On Ubuntu/Debian
+	sudo apt update
+	sudo apt install nginx -y
+	On CentOS/RHEL
+	sudo yum install epel-release -y
+	sudo yum install nginx -y
+	On other Linux systems
+	Use your system’s package manager (e.g., dnf, zypper) or compile from source if needed.
+
+	Step 2: Basic Nginx Reverse Proxy Configuration
+	You will create server blocks (virtual hosts) that listen on ports (usually 80 or 443) and proxy requests to Fleet and Kibana.
+	Assumptions
+	Fleet is running on http://localhost:8220 (adjust as necessary)
+	Kibana is running on http://localhost:5601 (adjust as necessary)
+	Nginx can be on the same server or another machine that can reach these services via network
+	Example Nginx Configuration File
+
+	Create a file /etc/nginx/conf.d/reverse-proxy.conf or a relevant site-enabled conf.
+	server {
+		listen 80;
+		server_name your-domain.com;  # Replace with your domain or IP
+
+		# Proxy Fleet interface (e.g., /fleet)
+		location /fleet/ {
+			proxy_pass http://fleet-server-ip:8220/;   # Replace fleet-server-ip if on another server
+			proxy_http_version 1.1;
+			proxy_set_header Upgrade $http_upgrade;
+			proxy_set_header Connection 'upgrade';
+			proxy_set_header Host $host;
+			proxy_cache_bypass $http_upgrade;
+		}
+
+		# Proxy Kibana interface (e.g., /kibana)
+		location /kibana/ {
+			proxy_pass http://kibana-server-ip:5601/;  # Replace kibana-server-ip if different
+			proxy_http_version 1.1;
+			proxy_set_header Upgrade $http_upgrade;
+			proxy_set_header Connection 'upgrade';
+			proxy_set_header Host $host;
+			proxy_cache_bypass $http_upgrade;
+		}
+	}
+	If Nginx is on the same server, replace fleet-server-ip and kibana-server-ip with localhost or 127.0.0.1.
+	If on another server, replace with the IP or hostname of where Fleet and Kibana are running.
+	The trailing slashes (/) are important for proper path forwarding.
+
+	Step 3: Enable and Restart Nginx
+	Check the configuration syntax:
+	sudo nginx -t
+	If syntax is OK, restart Nginx:
+	sudo systemctl restart nginx
+	Enable Nginx to start on boot:
+	sudo systemctl enable nginx
+
+	Step 4: Adjust Fleet and Kibana Base URLs (Optional)
+	If Fleet or Kibana expect to run at root / paths, proxying under /fleet/ or /kibana/ may require adjusting their base URLs or configuring URL rewriting to avoid broken links.
+	Consult Fleet and Kibana docs to configure their base paths or use rewrite rules in Nginx if needed.
+
+	Step 5: HTTPS Setup (Recommended)
+	Use Certbot to obtain SSL certificates for secure connections:
+	sudo apt install certbot python3-certbot-nginx -y
+	sudo certbot --nginx -d your-domain.com
+	This automatically configures SSL in Nginx and redirects HTTP to HTTPS.
+
+Configure SSL termination and proxy rules for Kibana and Fleet using SSL certs.
+Open necessary ports (e.g., 443, 8443 for Kibana; 9443 for Fleet management).
+
+6. Install Elastic Agents on Hosts
+Through Kibana Fleet UI, create agent policies and generate enrollment commands.
+Run agent installation commands on hosts you want to monitor.
+Agents will connect to Fleet Server managed by your Elasticsearch stack.
+
+
+highwater mark for storage alert at 50%
+across hot and warm data nodes
+
+
+
+
+AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE3NTgxMzM1NTAwOTI6OHhGOHkwX3FRRW1idy1qWTk5Q2luQQ
+
+
+
+docker run \
+ --env --fleet-server-es=http://localhost:9200 \ \
+ --env fleet-server-service-token=AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE3NTgxMzUwNzUyMDQ6TUxOQUJnT0FROXVCTnEwdTVUZ3FJUQ  \
+ --env fleet-server-policy=499b5aa7-d214-5b5d-838b-3cd76469844e\
+ --env fleet-server-insecure-http\
+ --rm docker.elastic.co/elastic-agent/elastic-agent:7.17.23-arm64
+ 
+elastic-agent install   \
+  --fleet-server-es=http://localhost:9200 \
+  --fleet-server-service-token=AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE3NTgxMzUwNzUyMDQ6TUxOQUJnT0FROXVCTnEwdTVUZ3FJUQ \
+  --fleet-server-policy=499b5aa7-d214-5b5d-838b-3cd76469844e \
+  --fleet-server-insecure-http
+  
+  
+  elastic-agent enroll   \
+  --fleet-server-es=http://localhost:9200 \
+  --fleet-server-service-token=AAEAAWVsYXN0aWMvZmxlZXQtc2VydmVyL3Rva2VuLTE3NTgxMzUwNzUyMDQ6TUxOQUJnT0FROXVCTnEwdTVUZ3FJUQ \
+  --fleet-server-policy=499b5aa7-d214-5b5d-838b-3cd76469844e \
+  --fleet-server-insecure-http

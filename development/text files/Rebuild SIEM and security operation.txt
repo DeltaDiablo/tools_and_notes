@@ -1,0 +1,45 @@
+Rebuild SIEM and security operations stack
+
+1.Retain existing deployment flow as a template to work off and upgrade elasticsearch to 9.2 to bring in new capabilities/features
+
+2.Implement elastic fleet (Elastic Agent manager)
+
+	1.Enrollment policies
+
+	2.Package registry
+
+	3.Implement elastic Security (with elastic Defend via Agent integration)
+
+	4.Rebuild network security sensors and packet analytics apps
+
+1.Update suricatta, arkime, zeek component builder packages to the latest versions approved
+
+	2.Explicitly add in MALCOLM as a deployable service
+
+5.Rebuild minio and xsoar integration paths? or possibly integrate Elastic Case Management ILO XSOAR
+
+	1.Preserve MinIO and XSOAR role investment but move from add-node-only orchestration into full lifecycle orchestration
+
+	2.Keep known MinIO hardening fixes from repo memory as mandatory controls.
+
+
+
+Output:
+
+1.Fleet managed agents deployed
+
+2.Elastic Defend active on linux/windowsendpoints
+
+3.tested backup/archive and incident orchestration paths integrated with Elasticsearchsecurity outputs
+
+4.End-to-endpacket/log flow: sensor -> parser -> SIEM -> detection -> case workflow
+
+
+
+RISKS IDENTIFIED:
+
+1.Fleet/Defend implementation gap (currently not in use)
+
+2.Malcolm implementation gap (currenlynot in use)
+
+3.Version and schema drift risk for sensors (approved vs authorized vs implemented)

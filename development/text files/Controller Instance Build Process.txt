@@ -1,0 +1,40 @@
+Controller VM Instance Build Process
+
+### <u>Files Touched</u>
+
+tfplenum/gitlab/DIP/dip.build.gitlab-ci.yml
+tfplenum/testing/pipeline/pipeline.py
+tfplenum/testing/pipeline/models/ctrl_setup.py
+tfplenum/testing/pipeline/models/common.py
+tfplenum/testing/pipeline/models/remote_node.py
+tfplenum/testing/pipeline/util/network.py
+tfplenum/testing/pipeline/util/yaml_util.py
+tfplenum/testing/pipeline/jobs/ctrl_setup.py
+tfplenum/testing/pipeline/util/ansible_util.py
+tfplenum/testing/pipeline/util/constants.py
+tfplenum/testing/pipeline/util/ssh.py
+tfplenum/testing/pipeline/util/vmware_util.py
+tfplenum/testing/pipeline/playbooks/clone_ctrl.yml
+
+
+### <u>Workflow</u>
+* tfplenum/.gitlab-ci.yml
+* tfplenum/gitlab/DIP/dip.build.gitlab-ci.yml
+* tfplenum/testing/pipeline/pipeline.py
+* tfplenum/testing/pipeline/handlers/setup_controller.py
+* tfplenum/testing/pipeline/jobs/ctrl_setup.py
+* tfplenum/testing/pipeline/playbooks/clone_ctrl.yml
+* tfplenum/testing/pipeline/jobs/ctrl_setup.py
+
+
+Hardware Controller only rabbit for workflow and the files touched
+
+
+1. starts with tfplenum/.gitlab-ci.yml sets PIPELINE VAR hw-controller-only 
+2. flows to tfplenum/component-builder/builder.gitlab-ci.yml (std OOTB setup)
+3. flows to GitLab/DIP/dip.baremetal-gitlab-ci.yml -> (sets up the hardware controller and sets variables)
+4. flows to tfplenum/testing/pipeline/baremetal_pipeline.py -> ( sets up the baremetalrunner class with args)
+   flows to Users/edward.thomas/devops/gitkraken/tfplenum/testing/pipeline/models/ctrl_setup.py -> (establishes
+5. flows to tfplenum/testing/pipeline/jobs/ctrl_setup.py -> (flows to 
+4. flows to gitlab/DIP/dip.docs.gitlab-ci.yml -> (generates the documents for use with kit)
+5. 
